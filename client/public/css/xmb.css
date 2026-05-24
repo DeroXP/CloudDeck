@@ -156,9 +156,10 @@ input:focus, select:focus {
   50%      { transform: translate3d(-120px, 85px, 0)  scaleY(0.75) scaleX(1.12); }
 }
 
-/* --- Diagonal light sweep --- A bright translucent gradient slash that
-   moves diagonally across the screen on a tight loop. Guaranteed-visible
-   motion even if every other layer happens to be near a steady state. */
+/* --- Diagonal light sweep --- Subtle slash of slightly-warmer red that
+   sweeps across the screen on a long loop. Was previously too obvious;
+   pulled the opacity and contrast WAY down so it reads as ambient
+   atmosphere rather than a moving element you can't help looking at. */
 .cd-bg-sweep {
   position: absolute;
   top: -50%;
@@ -166,13 +167,13 @@ input:focus, select:focus {
   width: 200%;
   height: 200%;
   background: linear-gradient(115deg,
-    transparent 35%,
-    rgba(255, 130, 160, 0.12) 47%,
-    rgba(255, 200, 220, 0.22) 50%,
-    rgba(255, 130, 160, 0.12) 53%,
-    transparent 65%);
+    transparent 42%,
+    rgba(255, 150, 170, 0.04) 49%,
+    rgba(255, 200, 220, 0.07) 50%,
+    rgba(255, 150, 170, 0.04) 51%,
+    transparent 58%);
   pointer-events: none;
-  animation: cd-bg-sweep 7s linear infinite;
+  animation: cd-bg-sweep 18s linear infinite;
   will-change: transform;
 }
 @keyframes cd-bg-sweep {
@@ -214,14 +215,14 @@ input:focus, select:focus {
 .cd-ps-shape:nth-of-type(4n+1) { animation-duration: 17s; }
 .cd-ps-shape:nth-of-type(5n)   { animation-duration: 12s; font-size: 54px; }
 
-/* Big-enough drift to clearly travel across the screen, with cubic-bezier
-   easing for gentle motion. Opacity dips down at the rest point so each
-   shape visibly fades in/out as it moves — extra motion cue. */
+/* Drift expressed in vmin (smaller of viewport width/height) so the motion
+   scales proportionally with screen size. Previously px values made shapes
+   barely move on a 1920px monitor while flying around on a 360px phone. */
 @keyframes cd-shape-drift {
-  0%, 100% { transform: translate(0, 0)          rotate(0deg);   opacity: 0.4; }
-  25%      { transform: translate(140px, -100px) rotate(15deg);  opacity: 1; }
-  50%      { transform: translate(60px, -220px)  rotate(-20deg); opacity: 0.7; }
-  75%      { transform: translate(-120px, -60px) rotate(10deg);  opacity: 0.95; }
+  0%, 100% { transform: translate(0, 0)              rotate(0deg);   opacity: 0.4; }
+  25%      { transform: translate(14vmin, -10vmin)   rotate(15deg);  opacity: 1; }
+  50%      { transform: translate(6vmin, -22vmin)    rotate(-20deg); opacity: 0.7; }
+  75%      { transform: translate(-12vmin, -6vmin)   rotate(10deg);  opacity: 0.95; }
 }
 
 /* --- Vignette: subtle darkening at the edges --- */
@@ -238,17 +239,37 @@ input:focus, select:focus {
   .cd-bg-halo, .cd-wave, .cd-ps-shape { animation: none; }
 }
 
-/* Mobile: ease up on animation cost so we keep 60fps even on weaker GPUs */
+/* Mobile: much more conservative motion. Phones have small viewports so
+   the same vmin-based amplitudes translate to a way smaller absolute
+   distance, BUT motion that's smooth on a 27" monitor often reads as
+   frantic on a 6" screen. Slow everything down significantly and shrink
+   the shape drift further so the layer hums rather than buzzes. */
 @media (max-width: 768px) {
-  .cd-bg-halo { animation-duration: 14s; }
-  .cd-wave-a { animation-duration: 28s; }
-  .cd-wave-b { animation-duration: 36s; }
-  .cd-wave-c { animation-duration: 44s; }
-  .cd-wave-d { animation-duration: 50s; }
-  .cd-wave-e { animation-duration: 56s; }
-  .cd-ps-shape { font-size: 20px; animation-duration: 32s; }
-  .cd-ps-shape:nth-of-type(2n) { font-size: 24px; }
-  .cd-bg-waves { filter: none; }     /* skip the blur on mobile */
+  .cd-bg-halo  { animation-duration: 16s; }
+  .cd-bg-sweep { display: none; }       /* sweep is purely atmospheric on desktop, skip it on mobile */
+
+  .cd-wave-a { animation-duration: 26s; }
+  .cd-wave-b { animation-duration: 30s; }
+  .cd-wave-c { animation-duration: 34s; }
+  .cd-wave-d { animation-duration: 28s; }
+  .cd-wave-e { animation-duration: 32s; }
+  .cd-bg-waves { filter: none; }        /* skip the blur — costly + barely visible on small screens */
+
+  .cd-ps-shape                   { font-size: 28px; animation-duration: 22s; }
+  .cd-ps-shape:nth-of-type(2n)   { font-size: 34px; animation-duration: 24s; }
+  .cd-ps-shape:nth-of-type(3n)   { font-size: 24px; animation-duration: 26s; }
+  .cd-ps-shape:nth-of-type(4n+1) { animation-duration: 28s; }
+  .cd-ps-shape:nth-of-type(5n)   { font-size: 30px; animation-duration: 25s; }
+}
+@media (max-width: 768px) {
+  /* Smaller drift radius on mobile so glyphs don't fly halfway across the
+     phone screen. ~half the desktop vmin amplitudes. */
+  @keyframes cd-shape-drift {
+    0%, 100% { transform: translate(0, 0)             rotate(0deg);   opacity: 0.45; }
+    25%      { transform: translate(7vmin, -5vmin)    rotate(8deg);   opacity: 0.95; }
+    50%      { transform: translate(3vmin, -11vmin)   rotate(-12deg); opacity: 0.7; }
+    75%      { transform: translate(-6vmin, -3vmin)   rotate(6deg);   opacity: 0.9; }
+  }
 }
 
 /* ============================================================
