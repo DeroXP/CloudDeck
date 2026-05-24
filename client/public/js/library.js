@@ -2,6 +2,7 @@
 
 import { api } from './api.js';
 import { focus } from './focus.js';
+import { renderPlatformIcon } from './platform-icons.js';
 
 export class LibraryModule {
   constructor({ realtime, onLaunch, onSelect }) {
@@ -69,7 +70,7 @@ export class LibraryModule {
       const badge = platformBadge(game.platform);
       card.innerHTML = `
         <span class="cd-game-platform cd-platform-${escapeAttr(game.platform || 'unknown')}" title="${badge.label}" aria-label="${badge.label}">
-          <span class="cd-platform-icon"></span>
+          ${renderPlatformIcon(game.platform)}
         </span>
         ${game.art
           ? `<img alt="" loading="lazy" src="${escapeAttr(game.art)}" onerror="this.style.display='none'; this.nextElementSibling.style.display='grid'" />

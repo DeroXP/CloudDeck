@@ -123,14 +123,23 @@ export class Library {
       const res = await fetch(url, { signal: AbortSignal.timeout(4000) });
       if (!res.ok) { this._steamSearchCache.set(name, null); return null; }
       const data = await res.json();
-      // Pick the first item whose name is a reasonable match — Steam's
-      // search returns lots of fuzzy hits and we don't want "Call of Duty: WW2"
-      // showing up when the user has plain "Call of Duty" installed.
+      // Match in priority order: exact normalized name first, then
+      // normalized-startsWith. Steam returns fuzzy hits in its own
+      // popularity order, which for franchise titles like "Call of Duty"
+      // can surface a much older entry (e.g. "Call of Duty: Black Ops III")
+      // ahead of the franchise hub. Exact match catches the hub
+      // ("Call of Duty" → app 1938090) before the prefix-match heuristic.
       const wantedNorm = normalizeAppName(name);
-      const hit = (data.items || []).find(it => {
-        const got = normalizeAppName(it.name);
-        return got === wantedNorm || got.startsWith(wantedNorm) || wantedNorm.startsWith(got);
-      }) || (data.items || [])[0];
+      const items = (data.items || []).filter(it => it && it.id && it.name);
+      // Strip Steam's trademark glyphs from item names before comparing so
+      // "Call of Duty®" normalizes to "callofduty" (matches "Call of Duty").
+      const norm = it => normalizeAppName(String(it.name).replace(/[®™©]/g, ''));
+      const exact = items.find(it => norm(it) === wantedNorm);
+      const prefixed = !exact && items.find(it => {
+        const got = norm(it);
+        return got.startsWith(wantedNorm) || wantedNorm.startsWith(got);
+      });
+      const hit = exact || prefixed || items[0];
       const result = hit ? { id: String(hit.id), name: hit.name } : null;
       this._steamSearchCache.set(name, result);
       return result;
