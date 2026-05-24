@@ -30,14 +30,26 @@ export class Launcher {
     const launchUrl = game.launchUrl;
     if (!launchUrl) throw new Error('Game has no launchUrl');
 
-    // shell:appsfolder\<AUMID> only resolves through Explorer's namespace
-    // parser, so for UWP/Xbox apps we MUST invoke via explorer.exe. For
-    // ordinary protocol handlers (steam://, etc.) `cmd /c start` is the
-    // reliable path because cmd's `start` knows about URL protocol routing.
+    // Three flavors of launchUrl, picked by prefix:
+    //   shell:appsfolder\<AUMID>  → UWP/Xbox apps — only Explorer resolves
+    //                                this namespace path correctly.
+    //   <scheme>://...            → URL protocol handlers (steam://,
+    //                                com.epicgames.launcher://, battlenet://,
+    //                                uplay://, goggalaxy://). Routed via
+    //                                cmd's `start` which knows about the
+    //                                Windows protocol registry.
+    //   <path>\game.exe           → Raw executable (EA App fallback).
+    //                                spawn it directly; the EA Desktop
+    //                                client attaches automatically.
     if (launchUrl.startsWith('shell:')) {
       spawn('explorer.exe', [launchUrl], { detached: true, stdio: 'ignore' }).unref();
-    } else {
+    } else if (/^[a-z][a-z0-9+.-]*:\/\//i.test(launchUrl) || launchUrl.startsWith('steam:')) {
       spawn('cmd', ['/c', 'start', '""', launchUrl], { detached: true, stdio: 'ignore' }).unref();
+    } else {
+      // Treat as raw path — start.exe handles it with the launch dir as cwd
+      // so games that load assets relative to the exe still find them.
+      const cwd = launchUrl.substring(0, launchUrl.lastIndexOf('\\'));
+      spawn('cmd', ['/c', 'start', '""', '/D', cwd || '.', launchUrl], { detached: true, stdio: 'ignore' }).unref();
     }
 
     this.current = {

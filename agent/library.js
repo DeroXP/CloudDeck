@@ -24,6 +24,23 @@ import { exec } from 'node:child_process';
 import { promisify } from 'node:util';
 import { config } from './config.js';
 
+// Per-launcher scanners — each exports detect() + scan(). They check for
+// their own launcher being installed and return [] if not, so adding new
+// ones doesn't affect users who don't have them.
+import * as epic from './launchers/epic.js';
+import * as battlenet from './launchers/battlenet.js';
+import * as ea from './launchers/ea.js';
+import * as ubisoft from './launchers/ubisoft.js';
+import * as gog from './launchers/gog.js';
+
+const EXTRA_LAUNCHERS = [
+  { name: 'epic',      mod: epic },
+  { name: 'battlenet', mod: battlenet },
+  { name: 'ea',        mod: ea },
+  { name: 'ubisoft',   mod: ubisoft },
+  { name: 'gog',       mod: gog },
+];
+
 const execAsync = promisify(exec);
 
 const STEAM_BOX_ART = id =>
@@ -42,18 +59,39 @@ export class Library {
     if (!refresh && this.cache && Date.now() - this.cacheAt < 30_000) {
       return this.cache;
     }
-    const [steam, xbox] = await Promise.all([
-      this._steam().catch(err => {
-        console.warn('[library] steam scan failed:', err.message);
-        return [];
-      }),
-      this._xbox().catch(err => {
-        console.warn('[library] xbox scan failed:', err.message);
-        return [];
+    // Steam + Xbox have their own scanners (legacy methods on this class).
+    // Every other launcher lives in agent/launchers/ and gets walked here in
+    // parallel. detect() runs first so we only do the work if the launcher
+    // exists; this keeps the scan fast for users who only have a couple
+    // launchers installed.
+    const platformScans = await Promise.all([
+      this._steam().catch(err => { console.warn('[library] steam:', err.message); return []; }),
+      this._xbox().catch(err => { console.warn('[library] xbox:', err.message); return []; }),
+      ...EXTRA_LAUNCHERS.map(async ({ name, mod }) => {
+        try {
+          if (!(await mod.detect())) return [];
+          const games = await mod.scan();
+          if (games.length > 0) console.log(`[library] ${name}: ${games.length} games`);
+          return games;
+        } catch (err) {
+          console.warn(`[library] ${name} scan failed:`, err.message);
+          return [];
+        }
       }),
     ]);
-    const games = [...steam, ...xbox].sort((a, b) => a.name.localeCompare(b.name));
-    console.log(`[library] total: ${games.length} games (steam ${steam.length}, xbox ${xbox.length})`);
+    const [steam, xbox, ...extras] = platformScans;
+    const flat = [...steam, ...xbox, ...extras.flat()];
+
+    // Dedupe by id (in case the same game appears in multiple registries)
+    const seen = new Set();
+    const games = flat
+      .filter(g => { if (seen.has(g.id)) return false; seen.add(g.id); return true; })
+      .sort((a, b) => a.name.localeCompare(b.name));
+
+    const breakdown = {};
+    for (const g of games) breakdown[g.platform] = (breakdown[g.platform] || 0) + 1;
+    console.log(`[library] total: ${games.length} games — ${Object.entries(breakdown).map(([p, n]) => `${p} ${n}`).join(', ')}`);
+
     this.cache = { games, scannedAt: Date.now() };
     this.cacheAt = Date.now();
     return this.cache;

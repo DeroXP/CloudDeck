@@ -66,9 +66,9 @@ export class LibraryModule {
     for (const game of this.games) {
       const card = document.createElement('div');
       card.className = 'cd-game';
-      const platform = (game.platform || 'unknown').toUpperCase();
+      const badge = platformBadge(game.platform);
       card.innerHTML = `
-        <span class="cd-game-platform">${platform}</span>
+        <span class="cd-game-platform cd-platform-${escapeAttr(game.platform || 'unknown')}" title="${badge.label}">${badge.letter}</span>
         ${game.art
           ? `<img alt="" loading="lazy" src="${escapeAttr(game.art)}" onerror="this.style.display='none'; this.nextElementSibling.style.display='grid'" />
              <div class="cd-game-fallback" style="display:none"><span>${escapeHtml(game.name)}</span></div>`
@@ -92,6 +92,22 @@ function escapeHtml(s) {
   return String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
 }
 function escapeAttr(s) { return escapeHtml(s); }
+
+// Single-letter badge per platform with the brand's primary color. Just
+// initials in colored circles — recognizable without copying trademarked
+// logos. The actual color is in the CSS class .cd-platform-<platform>.
+const PLATFORM_BADGES = {
+  steam:     { letter: 'S', label: 'Steam' },
+  xbox:      { letter: 'X', label: 'Xbox / Game Pass' },
+  epic:      { letter: 'E', label: 'Epic Games' },
+  battlenet: { letter: 'B', label: 'Battle.net' },
+  ea:        { letter: 'E', label: 'EA App' },
+  ubisoft:   { letter: 'U', label: 'Ubisoft Connect' },
+  gog:       { letter: 'G', label: 'GOG Galaxy' },
+};
+function platformBadge(platform) {
+  return PLATFORM_BADGES[platform] || { letter: '?', label: 'Unknown' };
+}
 
 function timeAgo(t) {
   if (!t) return '';
