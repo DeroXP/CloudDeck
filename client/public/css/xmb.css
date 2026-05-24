@@ -583,6 +583,17 @@ input:focus, select:focus {
   border-color: var(--cd-red);
   box-shadow: 0 0 20px var(--cd-red-glow);
 }
+/* Exit-stream sits to the left of the library button so they don't overlap.
+   Made visually distinct (red tint) since it's a more decisive action. */
+.cd-overlay-btn-exit {
+  right: auto;
+  left: 18px;
+  border-color: var(--cd-red);
+  color: var(--cd-red);
+}
+.cd-overlay-btn-exit:hover, .cd-overlay-btn-exit.cd-focused {
+  background: rgba(230, 57, 70, 0.15);
+}
 
 .cd-overlay {
   position: fixed;

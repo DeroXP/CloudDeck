@@ -19,12 +19,38 @@ export class StreamModule extends EventTarget {
     this.overlay = document.getElementById('overlay');
     this.freeze = document.getElementById('freeze');
 
+    this.exitBtn = document.getElementById('exit-stream-btn');
+
     this.overlayBtn.addEventListener('click', () => this.toggleOverlay());
+    this.exitBtn?.addEventListener('click', () => this.exitToXMB());
     input.addEventListener('home', () => this.toggleOverlay());
+
+    // Esc / B button while a stream is active: close the overlay first if it's
+    // open, otherwise tear the whole session down. This is the escape hatch
+    // for "I clicked launch but nothing's actually streaming."
+    input.addEventListener('back', () => {
+      if (!this.active) return;
+      if (this.overlay.classList.contains('cd-overlay-active')) {
+        this.toggleOverlay();
+      } else {
+        this.exitToXMB();
+      }
+    });
 
     this.realtime.addEventListener('msg:game-launched', e => this._onGameLaunched(e.detail));
     this.realtime.addEventListener('msg:game-ended', e => this._onGameEnded(e.detail));
     this.realtime.addEventListener('msg:crash', e => this._onCrash(e.detail));
+  }
+
+  // Hard exit: ask the agent to close any tracked game + restore the
+  // physical display + unmute speakers, then tear the local stream UI down.
+  // Safe to call even if no game ever actually launched.
+  async exitToXMB() {
+    try { await this.realtime.sendCommand('stop-session', {}); } catch { /* agent may be offline */ }
+    await this.stopStream();
+    this.currentGame = null;
+    this.startedAt = null;
+    this.dispatchEvent(new Event('exited'));
   }
 
   async startStream({ game, settings, streamUrl }) {
@@ -33,6 +59,7 @@ export class StreamModule extends EventTarget {
     this.startedAt = Date.now();
     this.streamEl.classList.add('cd-stream-active');
     this.overlayBtn.classList.remove('cd-hidden');
+    this.exitBtn?.classList.remove('cd-hidden');
     document.getElementById('xmb').classList.add('cd-xmb-hidden');
 
     // If we got an explicit URL (Sunshine browser client), embed it. Otherwise
@@ -69,6 +96,7 @@ export class StreamModule extends EventTarget {
     }
     this.streamEl.classList.remove('cd-stream-active');
     this.overlayBtn.classList.add('cd-hidden');
+    this.exitBtn?.classList.add('cd-hidden');
     this.overlay.classList.remove('cd-overlay-active');
     document.getElementById('xmb').classList.remove('cd-xmb-hidden');
     this.streamFrame.src = 'about:blank';

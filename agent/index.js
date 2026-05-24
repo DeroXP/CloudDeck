@@ -180,6 +180,17 @@ async function dispatch(type, payload = {}, { from } = {}) {
       const games = (await library.fetch()).games;
       const game = games.find(g => g.id === payload.gameId);
       if (!game) throw new Error('Game not found');
+
+      // Pre-flight: if Sunshine isn't reachable we'd be touching displays and
+      // audio for a stream that can never appear. Refuse early so the user
+      // gets a clear toast instead of a stuck stream view.
+      if (!payload.skipSunshineCheck) {
+        const health = await sunshine.health();
+        if (!health.ok) {
+          throw new Error('Sunshine is not reachable. Install and start Sunshine before launching games.');
+        }
+      }
+
       // Optionally apply stream config from the client first
       if (payload.streamConfig) {
         const [w, h] = parseResolution(payload.streamConfig.resolution || '1080p');
@@ -191,6 +202,14 @@ async function dispatch(type, payload = {}, { from } = {}) {
 
     case 'close-game':
       return launcher.close({ userInitiated: true });
+
+    case 'stop-session':
+      // Hard tear-down — used by the browser's "Exit Stream" button. Safe
+      // when no game is actually running (each step is idempotent).
+      await launcher.close({ userInitiated: true }).catch(() => {});
+      await display.deactivateVirtual().catch(() => {});
+      await audio.restoreSpeakers().catch(() => {});
+      return { ok: true };
 
     case 'set-stream-config': {
       const [w, h] = parseResolution(payload.resolution || '1080p');
@@ -314,7 +333,11 @@ connect();
 // ---- Shutdown ----
 async function shutdown() {
   console.log('[agent] shutting down…');
+  // Restore any system state the agent altered so the user isn't left with
+  // black monitors or muted speakers if the service is stopped mid-session.
   await launcher.close({ userInitiated: true }).catch(() => {});
+  await display.deactivateVirtual().catch(() => {});
+  await audio.restoreSpeakers().catch(() => {});
   await screenshots.stop().catch(() => {});
   updater.stop();
   if (ws) ws.close();
