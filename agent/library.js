@@ -195,12 +195,18 @@ export class Library {
       throw err;
     }
 
+    // Load the installed-apps map once. shell:appsfolder\<AUMID> is the only
+    // reliable way to launch UWP/Xbox apps — the AUMID can't be derived from
+    // the appx Identity alone (it needs the publisher-hash suffix and the
+    // app-id, neither of which lives in MicrosoftGame.config).
+    const aumidMap = await this._loadAumidMap();
+
     const games = [];
     let dlcSkipped = 0;
     for (const entry of entries) {
       if (!entry.isDirectory()) continue;
       const folder = path.join(config.xboxGamesDir, entry.name);
-      const game = await this._readXboxGame(folder, entry.name);
+      const game = await this._readXboxGame(folder, entry.name, aumidMap);
       if (game) games.push(game);
       else dlcSkipped++;
     }
@@ -210,8 +216,31 @@ export class Library {
     return games;
   }
 
+  // Walk Get-StartApps to learn every installed UWP/Xbox app's real AUMID.
+  // The map is keyed on a normalized form of the display name so we can fuzzy-
+  // match against the DefaultDisplayName from MicrosoftGame.config.
+  async _loadAumidMap() {
+    try {
+      const { stdout } = await execAsync(
+        `powershell -NoProfile -Command "Get-StartApps | Where-Object { $_.AppID -match '!' } | Select-Object Name, AppID | ConvertTo-Json -Compress"`,
+        { timeout: 5000 },
+      );
+      const raw = JSON.parse(stdout);
+      const list = Array.isArray(raw) ? raw : [raw];
+      const map = new Map();
+      for (const app of list) {
+        const key = normalizeAppName(app.Name);
+        if (key) map.set(key, app.AppID);
+      }
+      return map;
+    } catch (err) {
+      console.warn('[library] Get-StartApps failed (Xbox launches will fall back):', err.message);
+      return new Map();
+    }
+  }
+
   // Returns a game record, or null if the folder is a DLC pack / stub.
-  async _readXboxGame(folder, folderName) {
+  async _readXboxGame(folder, folderName, aumidMap) {
     const configPath = path.join(folder, 'Content', 'MicrosoftGame.config');
     let xml;
     try { xml = await fs.readFile(configPath, 'utf8'); }
@@ -236,14 +265,24 @@ export class Library {
     // Best-effort art lookup; never block on it.
     const meta = await this._lookupXboxMeta(displayName).catch(() => null);
 
+    // Find the real AUMID by matching the display name against Get-StartApps.
+    // Fall back to the identity name (likely won't launch) so we still get a
+    // game record in the grid — at least the user sees it.
+    const cleanName = (meta?.title || displayName).replace(/[®™©]/g, '').trim();
+    const aumid =
+      aumidMap.get(normalizeAppName(cleanName))
+      || aumidMap.get(normalizeAppName(displayName))
+      || aumidMap.get(normalizeAppName(folderName));
+    const launchUrl = `shell:appsfolder\\${aumid || identityName}`;
+
     return {
       id: `xbox:${slugify(identityName)}`,
       gameId: meta?.productId || slugify(identityName),
-      // ® and ™ tend to render weirdly in the grid; strip them for the title.
-      name: (meta?.title || displayName).replace(/[®™©]/g, '').trim(),
+      name: cleanName,
       platform: 'xbox',
       art: meta?.art || null,
-      launchUrl: meta?.launchUri || `shell:appsfolder\\${identityName}`,
+      launchUrl,
+      aumid: aumid || null,
       folder,
       executable: exeName,
     };
@@ -271,7 +310,9 @@ export class Library {
         productId,
         title,
         art: poster?.Uri ? (poster.Uri.startsWith('//') ? `https:${poster.Uri}` : poster.Uri) : null,
-        launchUri: `ms-windows-store://pdp/?productid=${productId}`,
+        // Deliberately NO launchUri here — the MS Store product-detail-page
+        // URI (ms-windows-store://pdp/?productid=...) just opens the Store,
+        // it doesn't launch the game. Real launch URIs come from Get-StartApps.
       };
     } catch {
       return null;
@@ -281,6 +322,16 @@ export class Library {
 
 function slugify(s) {
   return s.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
+}
+
+// Aggressively normalize a display name so we can match across:
+//   - DefaultDisplayName in MicrosoftGame.config ("Call of Duty®")
+//   - Get-StartApps Name ("Call of Dutyr" — ® mangled to 'r' on some systems)
+//   - MS Store catalog title ("Call of Duty")
+//   - Folder name ("Call of Duty")
+function normalizeAppName(s) {
+  if (!s) return '';
+  return s.toLowerCase().replace(/[^a-z0-9]+/g, '');
 }
 
 // Filter out Steam's bundled tools/runtimes/redistributables that show up as

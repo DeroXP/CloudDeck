@@ -30,10 +30,15 @@ export class Launcher {
     const launchUrl = game.launchUrl;
     if (!launchUrl) throw new Error('Game has no launchUrl');
 
-    // `start` opens a URL with the registered protocol handler. We deliberately
-    // shell out via cmd because direct URI invocation through child_process
-    // can fail for ms-windows-store:// and steam://.
-    spawn('cmd', ['/c', 'start', '""', launchUrl], { detached: true, stdio: 'ignore' }).unref();
+    // shell:appsfolder\<AUMID> only resolves through Explorer's namespace
+    // parser, so for UWP/Xbox apps we MUST invoke via explorer.exe. For
+    // ordinary protocol handlers (steam://, etc.) `cmd /c start` is the
+    // reliable path because cmd's `start` knows about URL protocol routing.
+    if (launchUrl.startsWith('shell:')) {
+      spawn('explorer.exe', [launchUrl], { detached: true, stdio: 'ignore' }).unref();
+    } else {
+      spawn('cmd', ['/c', 'start', '""', launchUrl], { detached: true, stdio: 'ignore' }).unref();
+    }
 
     this.current = {
       game,
