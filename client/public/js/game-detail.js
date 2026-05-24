@@ -121,7 +121,11 @@ export class GameDetailModule extends EventTarget {
     });
     if (!res.ok) return null;
     const data = await res.json();
-    const product = data?.Products?.[0];
+    // The single-product endpoint returns { Product: {...} } (singular).
+    // The /products (plural, search) endpoint returns { Products: [...] }.
+    // We hit the singular one so read Product. Falling back to Products[0]
+    // so this still works if someone routes the proxy at the search URL.
+    const product = data?.Product || data?.Products?.[0];
     if (!product) return null;
     const loc = product.LocalizedProperties?.[0] || {};
     const images = loc.Images || [];
