@@ -85,9 +85,10 @@ export class StreamModule extends EventTarget {
 
   _placeholderUrl(game, backend) {
     const name = (game?.name || 'Unknown').replace(/[<>"']/g, '');
-    const body = backend === 'parsec'
-      ? this._parsecPlaceholderBody(name)
-      : this._sunshinePlaceholderBody(name);
+    const body =
+      backend === 'parsec' ? this._parsecPlaceholderBody(name) :
+      backend === 'moonlight' ? this._moonlightPlaceholderBody(name) :
+      this._sunshinePlaceholderBody(name);
     return 'data:text/html;charset=utf-8,' + encodeURIComponent(`<!doctype html>
 <html><head><meta name="viewport" content="width=device-width,initial-scale=1"><style>
 body{background:#0a0e1a;color:#f4f6fb;font-family:system-ui,-apple-system,sans-serif;margin:0;padding:24px;min-height:100vh;display:flex;align-items:center;justify-content:center;box-sizing:border-box;line-height:1.5}
@@ -118,6 +119,22 @@ a{color:#4c95ff}
   <a class="btn" href="https://play.google.com/store/apps/details?id=tv.parsec.client" target="_blank" style="padding:10px 18px;font-size:13px">Google Play</a>
   <a class="btn" href="https://parsec.app/downloads" target="_blank" style="padding:10px 18px;font-size:13px;background:transparent;border:1px solid #4c95ff;color:#4c95ff">Other platforms</a>
 </p>
+<div class="now">Now playing: <strong>${name}</strong></div>`;
+  }
+
+  _moonlightPlaceholderBody(name) {
+    // iOS / iPadOS path. Parsec doesn't have an iOS app at all, so for
+    // Apple devices Moonlight + Sunshine is the only free option.
+    return `
+<h1>Launched on PC</h1><h2>Open Moonlight to view</h2>
+<p><strong>${name}</strong> is now running on your gaming PC. Open <strong>Moonlight</strong> on this device — your PC should auto-discover on the local network. Tap it, then pick the running game to start streaming.</p>
+<p style="font-size:13px">Don't have Moonlight installed yet?</p>
+<p style="display:flex;gap:10px;flex-wrap:wrap">
+  <a class="btn" href="https://apps.apple.com/us/app/moonlight-game-streaming/id1000551566" target="_blank" style="padding:10px 18px;font-size:13px">iOS App Store</a>
+  <a class="btn" href="https://play.google.com/store/apps/details?id=com.limelight" target="_blank" style="padding:10px 18px;font-size:13px">Google Play</a>
+  <a class="btn" href="https://moonlight-stream.org/" target="_blank" style="padding:10px 18px;font-size:13px;background:transparent;border:1px solid #4c95ff;color:#4c95ff">Other platforms</a>
+</p>
+<p style="font-size:12px;color:#aab3c8">First-time pairing: Moonlight will show you a 4-digit PIN. CloudDeck's host (clouddeck) is already configured in Sunshine — paste the PIN in Sunshine's web UI at <code>https://&lt;your-pc-ip&gt;:47990</code> (or ask CloudDeck to send it for you).</p>
 <div class="now">Now playing: <strong>${name}</strong></div>`;
   }
 
