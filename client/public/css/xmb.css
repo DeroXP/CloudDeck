@@ -181,50 +181,6 @@ input:focus, select:focus {
   100% { transform: translate3d(30%, 30%, 0); }
 }
 
-/* --- Floating face-button glyphs --- */
-.cd-bg-shapes {
-  position: absolute;
-  inset: 0;
-  pointer-events: none;
-}
-/* Shapes layer sits ABOVE the wave ribbons so they aren't drowned out by
-   the busier background. Solid bright fill + strong glow so they read as
-   distinct foreground particles, not background noise. */
-.cd-bg-shapes {
-  z-index: 2;
-}
-.cd-ps-shape {
-  position: absolute;
-  font-family: 'Segoe UI Symbol', 'Apple Color Emoji', 'Noto Sans Symbols', system-ui, sans-serif;
-  font-size: 48px;
-  font-weight: 400;
-  /* Solid pale-rose with high opacity — pops against any wave colour underneath. */
-  color: rgba(255, 230, 240, 0.95);
-  text-shadow:
-    0 0 8px rgba(255, 255, 255, 0.6),
-    0 0 24px rgba(255, 140, 170, 1),
-    0 0 50px rgba(230, 57, 70, 0.8);
-  animation: cd-shape-drift 14s cubic-bezier(0.45, 0, 0.55, 1) infinite;
-  user-select: none;
-  will-change: transform, opacity;
-  filter: drop-shadow(0 0 6px rgba(255, 100, 130, 0.7));
-}
-/* Stagger size + cycle per index so neighbours don't move in lockstep. */
-.cd-ps-shape:nth-of-type(2n)   { animation-duration: 11s; font-size: 60px; }
-.cd-ps-shape:nth-of-type(3n)   { animation-duration: 13s; font-size: 42px; }
-.cd-ps-shape:nth-of-type(4n+1) { animation-duration: 17s; }
-.cd-ps-shape:nth-of-type(5n)   { animation-duration: 12s; font-size: 54px; }
-
-/* Drift expressed in vmin (smaller of viewport width/height) so the motion
-   scales proportionally with screen size. Previously px values made shapes
-   barely move on a 1920px monitor while flying around on a 360px phone. */
-@keyframes cd-shape-drift {
-  0%, 100% { transform: translate(0, 0)              rotate(0deg);   opacity: 0.4; }
-  25%      { transform: translate(14vmin, -10vmin)   rotate(15deg);  opacity: 1; }
-  50%      { transform: translate(6vmin, -22vmin)    rotate(-20deg); opacity: 0.7; }
-  75%      { transform: translate(-12vmin, -6vmin)   rotate(10deg);  opacity: 0.95; }
-}
-
 /* --- Vignette: subtle darkening at the edges --- */
 .cd-bg-vignette {
   position: absolute;
@@ -236,40 +192,22 @@ input:focus, select:focus {
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .cd-bg-halo, .cd-wave, .cd-ps-shape { animation: none; }
+  .cd-bg-halo, .cd-wave, .cd-bg-sweep { animation: none; }
 }
 
-/* Mobile: much more conservative motion. Phones have small viewports so
-   the same vmin-based amplitudes translate to a way smaller absolute
-   distance, BUT motion that's smooth on a 27" monitor often reads as
-   frantic on a 6" screen. Slow everything down significantly and shrink
-   the shape drift further so the layer hums rather than buzzes. */
+/* Mobile background calmed: hide the diagonal sweep entirely, slow the wave
+   cycles to ocean-swell timescales, drop the SVG blur. The wave SMIL morph
+   in the SVG itself is fine to keep — that's gentle. The whole mobile
+   layout is rebuilt at the bottom of this file. */
 @media (max-width: 768px) {
-  .cd-bg-halo  { animation-duration: 16s; }
-  .cd-bg-sweep { display: none; }       /* sweep is purely atmospheric on desktop, skip it on mobile */
-
-  .cd-wave-a { animation-duration: 26s; }
-  .cd-wave-b { animation-duration: 30s; }
-  .cd-wave-c { animation-duration: 34s; }
-  .cd-wave-d { animation-duration: 28s; }
-  .cd-wave-e { animation-duration: 32s; }
-  .cd-bg-waves { filter: none; }        /* skip the blur — costly + barely visible on small screens */
-
-  .cd-ps-shape                   { font-size: 28px; animation-duration: 22s; }
-  .cd-ps-shape:nth-of-type(2n)   { font-size: 34px; animation-duration: 24s; }
-  .cd-ps-shape:nth-of-type(3n)   { font-size: 24px; animation-duration: 26s; }
-  .cd-ps-shape:nth-of-type(4n+1) { animation-duration: 28s; }
-  .cd-ps-shape:nth-of-type(5n)   { font-size: 30px; animation-duration: 25s; }
-}
-@media (max-width: 768px) {
-  /* Smaller drift radius on mobile so glyphs don't fly halfway across the
-     phone screen. ~half the desktop vmin amplitudes. */
-  @keyframes cd-shape-drift {
-    0%, 100% { transform: translate(0, 0)             rotate(0deg);   opacity: 0.45; }
-    25%      { transform: translate(7vmin, -5vmin)    rotate(8deg);   opacity: 0.95; }
-    50%      { transform: translate(3vmin, -11vmin)   rotate(-12deg); opacity: 0.7; }
-    75%      { transform: translate(-6vmin, -3vmin)   rotate(6deg);   opacity: 0.9; }
-  }
+  .cd-bg-halo  { animation-duration: 18s; }
+  .cd-bg-sweep { display: none; }
+  .cd-wave-a { animation-duration: 28s; }
+  .cd-wave-b { animation-duration: 32s; }
+  .cd-wave-c { animation-duration: 36s; }
+  .cd-wave-d { animation-duration: 30s; }
+  .cd-wave-e { animation-duration: 34s; }
+  .cd-bg-waves { filter: none; }
 }
 
 /* ============================================================
@@ -1328,13 +1266,172 @@ body.cd-input-touch button, body.cd-input-touch .cd-game, body.cd-input-touch .c
 body.cd-input-mouse .cd-hints .cd-hint-controller { display: none; }
 body.cd-input-controller .cd-hints .cd-hint-key { display: none; }
 
-/* Mobile-specific layout shifts */
-@media (max-width: 768px) {
-  .cd-xmb { padding: 0 20px; }
-  .cd-cats { gap: 36px; }
-  .cd-cat-icon { width: 50px; height: 50px; }
-  .cd-cat-label { font-size: 10px; letter-spacing: 2px; }
-  .cd-shortcuts { display: none; }
-  .cd-games { grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); }
-  .cd-header { padding: 12px 18px; }
+/* ============================================================
+   Mobile bottom-tab navigation (cd-mobile-nav)
+   Hidden on desktop, shown on mobile where it replaces .cd-cats.
+   ============================================================ */
+.cd-mobile-nav {
+  display: none;   /* desktop hides it entirely */
+}
+
+/* ============================================================
+   MOBILE LAYOUT — a deliberate, separate UI for phones (portrait + landscape).
+   Targets viewport ≤ 900px since iPhone Plus / Max in landscape sit at
+   ~896px wide. Replaces the desktop XMB row+items layout with:
+     - compact top header
+     - full-bleed content area
+     - fixed bottom tab bar
+   No floating shapes. Calmer background. Larger touch targets.
+   ============================================================ */
+@media (max-width: 900px) {
+  /* Top header: shrink padding, hide the brand text on the smallest
+     phones to save room for chips + power. */
+  .cd-header {
+    padding: 10px 14px;
+    background: linear-gradient(180deg, rgba(15,5,12,0.92), rgba(15,5,12,0));
+    backdrop-filter: blur(8px);
+  }
+  .cd-brand {
+    font-size: 11px;
+    letter-spacing: 3px;
+  }
+  .cd-header-right { gap: 8px; }
+  .cd-chip { padding: 5px 9px; font-size: 10px; letter-spacing: 0.5px; }
+  .cd-power { width: 32px; height: 32px; }
+  .cd-power svg { width: 16px; height: 16px; }
+
+  /* Drop the desktop XMB grid and use a simple top→bottom flow with the
+     items panel taking the full remaining viewport above the bottom nav. */
+  .cd-xmb {
+    display: flex;
+    flex-direction: column;
+    padding: 60px 0 calc(74px + env(safe-area-inset-bottom, 0px)) 0;
+    grid-template-rows: none;
+  }
+  .cd-shortcuts {
+    display: none;   /* shortcuts hidden — open the Games tab for the grid */
+  }
+  .cd-cats {
+    display: none;   /* desktop horizontal nav hidden — replaced by bottom tabs */
+  }
+  .cd-items {
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow: hidden;
+    padding: 0 16px;
+  }
+
+  /* Inner panels: tighter padding, mobile column counts. */
+  .cd-games {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 12px;
+  }
+  /* Landscape phones: fit 3-4 columns since the viewport gets wider. */
+  @media (orientation: landscape) {
+    .cd-games { grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); }
+  }
+
+  .cd-dash {
+    grid-template-columns: 1fr;
+    gap: 12px;
+  }
+  @media (orientation: landscape) {
+    .cd-dash { grid-template-columns: repeat(2, 1fr); }
+  }
+  .cd-dash-card { padding: 14px; }
+  .cd-dash-value { font-size: 26px; }
+
+  .cd-shots {
+    grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+    gap: 8px;
+  }
+
+  .cd-settings { max-width: 100%; padding-right: 4px; }
+  .cd-field {
+    grid-template-columns: 1fr;
+    gap: 6px;
+    margin-bottom: 16px;
+  }
+  .cd-settings-section { margin-bottom: 22px; }
+
+  /* Bottom tab bar — sticks to the bottom of the viewport, respecting
+     the iOS safe area (notch / home indicator). */
+  .cd-mobile-nav {
+    display: flex;
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    z-index: 50;
+    height: 64px;
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+    background: rgba(12, 3, 8, 0.88);
+    backdrop-filter: blur(20px);
+    border-top: 1px solid rgba(255, 255, 255, 0.08);
+    justify-content: space-around;
+    align-items: stretch;
+  }
+  .cd-mobile-tab {
+    flex: 1 1 0;
+    background: transparent;
+    border: none;
+    border-radius: 0;
+    padding: 8px 4px 6px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+    color: var(--cd-fg-dim);
+    font-family: inherit;
+    font-size: 10px;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    cursor: pointer;
+    transition: color 0.2s var(--cd-ease), background 0.2s var(--cd-ease);
+    min-height: 56px;
+    box-shadow: none;
+  }
+  .cd-mobile-tab:hover,
+  .cd-mobile-tab:focus {
+    box-shadow: none;
+    background: rgba(255, 255, 255, 0.03);
+  }
+  .cd-mobile-tab-icon {
+    width: 22px;
+    height: 22px;
+    transition: transform 0.2s var(--cd-ease);
+  }
+  .cd-mobile-tab-label {
+    font-weight: 500;
+  }
+  .cd-mobile-tab.cd-mobile-tab-active {
+    color: var(--cd-red);
+  }
+  .cd-mobile-tab.cd-mobile-tab-active .cd-mobile-tab-icon {
+    transform: scale(1.1);
+    filter: drop-shadow(0 0 6px var(--cd-red-glow));
+  }
+  /* Active-tab indicator: thin red line at the top of the active tab. */
+  .cd-mobile-tab.cd-mobile-tab-active::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 25%;
+    right: 25%;
+    height: 2px;
+    background: var(--cd-red);
+    box-shadow: 0 0 8px var(--cd-red-glow);
+    border-radius: 0 0 2px 2px;
+  }
+  .cd-mobile-tab { position: relative; }
+
+  /* Hints bar hidden on mobile — controller/keyboard cues don't apply. */
+  .cd-hints { display: none; }
+}
+
+/* Game detail modal already had a small mobile block earlier — keep that
+   working alongside the new layout. The body padding accounts for the
+   bottom tab bar since the modal sits above everything. */
+@media (max-width: 900px) {
+  .cd-detail { z-index: 80; }   /* above bottom nav */
 }

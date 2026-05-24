@@ -29,6 +29,13 @@ export class XMB extends EventTarget {
       el.addEventListener('click', () => this.setActive(idx));
     });
 
+    // Mobile bottom-tab bar — wires up the same setActive() so both UIs
+    // stay in sync regardless of which the user is interacting with.
+    this.mobileTabEls = [...document.querySelectorAll('.cd-mobile-tab')];
+    this.mobileTabEls.forEach((el, idx) => {
+      el.addEventListener('click', () => this.setActive(idx));
+    });
+
     focus.setActiveGroup('xmb-cats');
     this.setActive(0, { silent: true });
 
@@ -56,6 +63,9 @@ export class XMB extends EventTarget {
     this.activeIndex = index;
     this.catEls.forEach((el, i) => {
       el.classList.toggle('cd-cat-active', i === index);
+    });
+    this.mobileTabEls?.forEach((el, i) => {
+      el.classList.toggle('cd-mobile-tab-active', i === index);
     });
     // Translate categories so the active one centers (subtle visual)
     const offset = -index * 160 + 200;
