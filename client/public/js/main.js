@@ -140,27 +140,23 @@ powerBtn.addEventListener('click', async () => {
   }
 });
 
-// ---- Game launch / resume ----
+// ---- Game launch ----
+// New workflow: CloudDeck just kicks the game off on the PC. The user views
+// the stream in a separate viewer app (Moonlight). We deliberately do NOT
+// enter the in-browser stream view anymore — the iframe was a stuck-state
+// magnet on mobile and we can't actually pipe a Sunshine stream into it
+// without a heavy WebRTC bridge (see project history).
 async function launchGame(game) {
   toast(`Launching ${game.name}…`, 'ok');
   const dev = await api.deviceSettings(deviceId);
   const streamCfg = dev.settings || dev.defaults || {};
   try {
-    const result = await realtime.sendCommand('launch-game', {
+    await realtime.sendCommand('launch-game', {
       gameId: game.id,
       streamConfig: streamCfg,
     });
     dashboard.setActiveGame(game.name, Date.now());
-    afk.enable();
-    if (window.matchMedia('(pointer: coarse)').matches) mobile.enable();
-    // Build stream URL: agent told us in the result whether Sunshine offers a
-    // browser client URL. For self-hosted setups the user can configure this.
-    await stream.startStream({
-      game,
-      settings: streamCfg,
-      streamUrl: result?.streamUrl || null,
-      backend: result?.backend || 'sunshine',
-    });
+    toast(`${game.name} launched — open Moonlight to view`, 'ok', 6000);
   } catch (err) {
     toast(`Launch failed: ${err.message}`, 'warn');
   }
@@ -188,14 +184,13 @@ afk.addEventListener('fire', async () => {
   await stream.stopStream();
 });
 
-// Check whether a game is already running when we connect
+// Check whether a game is already running when we connect — just notify the
+// user via a toast, don't pop them into stream view (we no longer have one).
 async function checkResumeGame() {
   try {
     const res = await realtime.sendCommand('check-resume-game', {});
     if (res?.detected?.game) {
-      toast(`Resuming ${res.detected.game.name}…`, 'ok');
-      stream.startStream({ game: res.detected.game, settings: {}, streamUrl: null });
-      afk.enable();
+      toast(`${res.detected.game.name} is already running — open Moonlight`, 'ok', 6000);
       dashboard.setActiveGame(res.detected.game.name, Date.now());
     }
   } catch { /* PC might not be ready */ }

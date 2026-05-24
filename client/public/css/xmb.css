@@ -72,42 +72,82 @@ input:focus, select:focus {
 }
 
 /* ============================================================
-   Background — animated wave + particle effect
+   Background — PlayStation XMB-style waves + floating button glyphs
    ============================================================ */
 .cd-bg {
   position: fixed;
   inset: 0;
   z-index: 0;
-  background:
-    radial-gradient(circle at 20% 30%, rgba(76, 149, 255, 0.12), transparent 40%),
-    radial-gradient(circle at 80% 70%, rgba(230, 57, 70, 0.12), transparent 40%),
-    var(--cd-bg-deep);
   overflow: hidden;
+  background:
+    /* soft radial highlight near the upper-center, then deep blue gradient
+       top→bottom, matching the PS3/PS4 home-screen vibe. */
+    radial-gradient(ellipse 80% 50% at 50% 35%, #1e5fa8 0%, transparent 60%),
+    linear-gradient(180deg, #001a4d 0%, #003078 45%, #001236 100%);
 }
-.cd-bg::before, .cd-bg::after {
-  content: '';
+
+.cd-bg-waves {
   position: absolute;
-  inset: -20%;
-  background: radial-gradient(ellipse at center, rgba(76, 149, 255, 0.08) 0, transparent 60%);
-  animation: cd-wave 18s linear infinite;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  /* slight blur softens the SVG curves into the "energy ribbon" look */
+  filter: blur(0.5px);
 }
-.cd-bg::after {
-  background: radial-gradient(ellipse at center, rgba(230, 57, 70, 0.05) 0, transparent 60%);
-  animation-duration: 26s;
-  animation-direction: reverse;
+.cd-wave {
+  transform-origin: center center;
+  will-change: transform;
 }
-@keyframes cd-wave {
-  0%   { transform: translate(-5%, -5%) rotate(0deg); }
-  100% { transform: translate(5%, 5%) rotate(360deg); }
+.cd-wave-a { animation: cd-wave-flow-a 18s ease-in-out infinite; }
+.cd-wave-b { animation: cd-wave-flow-b 24s ease-in-out infinite; }
+.cd-wave-c { animation: cd-wave-flow-c 30s ease-in-out infinite; }
+
+@keyframes cd-wave-flow-a {
+  0%, 100% { transform: translate3d(0, 0, 0)        scaleY(1); }
+  50%      { transform: translate3d(-80px, 30px, 0) scaleY(1.4); }
+}
+@keyframes cd-wave-flow-b {
+  0%, 100% { transform: translate3d(0, 0, 0)        scaleY(1)   scaleX(1); }
+  50%      { transform: translate3d(60px, -40px, 0) scaleY(1.3) scaleX(0.95); }
+}
+@keyframes cd-wave-flow-c {
+  0%, 100% { transform: translate3d(0, 0, 0)         scaleY(1); }
+  50%      { transform: translate3d(-40px, -20px, 0) scaleY(0.7); }
+}
+
+/* PS button glyphs scattered + slowly drifting */
+.cd-bg-shapes {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+.cd-ps-shape {
+  position: absolute;
+  font-family: 'Segoe UI Symbol', 'Apple Color Emoji', system-ui, sans-serif;
+  font-size: 28px;
+  color: rgba(255, 255, 255, 0.16);
+  text-shadow: 0 0 12px rgba(120, 180, 255, 0.5);
+  animation: cd-shape-drift 22s ease-in-out infinite;
+  user-select: none;
+}
+@keyframes cd-shape-drift {
+  0%, 100% { transform: translate(0, 0); opacity: 0.4; }
+  25%      { transform: translate(15px, -20px); opacity: 0.7; }
+  50%      { transform: translate(-10px, -35px); opacity: 0.55; }
+  75%      { transform: translate(20px, 10px); opacity: 0.6; }
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .cd-bg::before, .cd-bg::after { animation: none; }
+  .cd-wave, .cd-ps-shape { animation: none; }
 }
 
-/* Mobile: reduce particle complexity */
+/* Mobile: keep the visuals but ease up on the animation cost */
 @media (max-width: 768px) {
-  .cd-bg::before, .cd-bg::after { animation-duration: 30s; opacity: 0.5; }
+  .cd-wave-a { animation-duration: 28s; }
+  .cd-wave-b { animation-duration: 36s; }
+  .cd-wave-c { animation-duration: 44s; }
+  .cd-ps-shape { font-size: 22px; animation-duration: 30s; }
+  .cd-bg-waves { filter: none; }
 }
 
 /* ============================================================
