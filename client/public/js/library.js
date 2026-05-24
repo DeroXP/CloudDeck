@@ -68,7 +68,9 @@ export class LibraryModule {
       card.className = 'cd-game';
       const badge = platformBadge(game.platform);
       card.innerHTML = `
-        <span class="cd-game-platform cd-platform-${escapeAttr(game.platform || 'unknown')}" title="${badge.label}">${badge.letter}</span>
+        <span class="cd-game-platform cd-platform-${escapeAttr(game.platform || 'unknown')}" title="${badge.label}" aria-label="${badge.label}">
+          <span class="cd-platform-icon"></span>
+        </span>
         ${game.art
           ? `<img alt="" loading="lazy" src="${escapeAttr(game.art)}" onerror="this.style.display='none'; this.nextElementSibling.style.display='grid'" />
              <div class="cd-game-fallback" style="display:none"><span>${escapeHtml(game.name)}</span></div>`
@@ -93,20 +95,21 @@ function escapeHtml(s) {
 }
 function escapeAttr(s) { return escapeHtml(s); }
 
-// Single-letter badge per platform with the brand's primary color. Just
-// initials in colored circles — recognizable without copying trademarked
-// logos. The actual color is in the CSS class .cd-platform-<platform>.
-const PLATFORM_BADGES = {
-  steam:     { letter: 'S', label: 'Steam' },
-  xbox:      { letter: 'X', label: 'Xbox / Game Pass' },
-  epic:      { letter: 'E', label: 'Epic Games' },
-  battlenet: { letter: 'B', label: 'Battle.net' },
-  ea:        { letter: 'E', label: 'EA App' },
-  ubisoft:   { letter: 'U', label: 'Ubisoft Connect' },
-  gog:       { letter: 'G', label: 'GOG Galaxy' },
+// Platform metadata for the badge in the top-right of each game card. Only
+// the human-readable label lives here now; the visual (colored circle +
+// masked brand SVG) is driven entirely from the CSS class
+// .cd-platform-<platform>.
+const PLATFORM_LABELS = {
+  steam: 'Steam',
+  xbox: 'Xbox / Game Pass',
+  epic: 'Epic Games',
+  battlenet: 'Battle.net',
+  ea: 'EA App',
+  ubisoft: 'Ubisoft Connect',
+  gog: 'GOG Galaxy',
 };
 function platformBadge(platform) {
-  return PLATFORM_BADGES[platform] || { letter: '?', label: 'Unknown' };
+  return { label: PLATFORM_LABELS[platform] || 'Unknown' };
 }
 
 function timeAgo(t) {

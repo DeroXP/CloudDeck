@@ -587,35 +587,50 @@ input:focus, select:focus {
   inset: 0;
   background: linear-gradient(135deg, rgba(230,57,70,0.18), transparent 60%);
 }
-/* Platform badge — small circular initial with the brand's primary color.
-   No actual brand logos (trademark territory), just letters in colored
-   circles. Recognizable at a glance once you've seen them twice. */
+/* Platform badge — circular brand-color background with the actual brand
+   SVG masked in white on top. SVGs are from simpleicons (MIT-licensed)
+   served as static assets from /assets/icons/. mask-image lets a single
+   CSS rule color any monochrome SVG, so the icon stays crisp at any size
+   and always renders white regardless of the source SVG's fill color. */
 .cd-game-platform {
   position: absolute;
   top: 8px;
   right: 8px;
-  width: 22px;
-  height: 22px;
+  width: 24px;
+  height: 24px;
   border-radius: 50%;
   display: grid;
   place-items: center;
-  font-size: 11px;
-  font-weight: 700;
-  color: white;
   background: rgba(0, 0, 0, 0.7);
-  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.5);
-  box-shadow: 0 0 0 1.5px rgba(255, 255, 255, 0.15), 0 2px 8px rgba(0, 0, 0, 0.6);
+  box-shadow: 0 0 0 1.5px rgba(255, 255, 255, 0.18), 0 2px 8px rgba(0, 0, 0, 0.6);
   z-index: 2;
-  letter-spacing: 0;
-  text-transform: none;
 }
-.cd-platform-steam     { background: #1b2838; }
-.cd-platform-xbox      { background: #107c10; }
-.cd-platform-epic      { background: #2a2a2a; }
-.cd-platform-battlenet { background: #00aeff; }
-.cd-platform-ea        { background: #ff4747; }
-.cd-platform-ubisoft   { background: #1c75bc; }
-.cd-platform-gog       { background: #7c3aed; }
+.cd-platform-icon {
+  display: block;
+  width: 14px;
+  height: 14px;
+  background: white;
+  -webkit-mask-position: center;
+          mask-position: center;
+  -webkit-mask-size: contain;
+          mask-size: contain;
+  -webkit-mask-repeat: no-repeat;
+          mask-repeat: no-repeat;
+}
+.cd-platform-steam                       { background: #1b2838; }
+.cd-platform-steam     .cd-platform-icon { -webkit-mask-image: url('/assets/icons/steam.svg');        mask-image: url('/assets/icons/steam.svg'); }
+.cd-platform-xbox                        { background: #107c10; }
+.cd-platform-xbox      .cd-platform-icon { -webkit-mask-image: url('/assets/icons/xbox.svg');         mask-image: url('/assets/icons/xbox.svg'); }
+.cd-platform-epic                        { background: #2a2a2a; }
+.cd-platform-epic      .cd-platform-icon { -webkit-mask-image: url('/assets/icons/epicgames.svg');    mask-image: url('/assets/icons/epicgames.svg'); }
+.cd-platform-battlenet                   { background: #00aeff; }
+.cd-platform-battlenet .cd-platform-icon { -webkit-mask-image: url('/assets/icons/battledotnet.svg'); mask-image: url('/assets/icons/battledotnet.svg'); }
+.cd-platform-ea                          { background: #ff4747; }
+.cd-platform-ea        .cd-platform-icon { -webkit-mask-image: url('/assets/icons/ea.svg');           mask-image: url('/assets/icons/ea.svg'); }
+.cd-platform-ubisoft                     { background: #1c75bc; }
+.cd-platform-ubisoft   .cd-platform-icon { -webkit-mask-image: url('/assets/icons/ubisoft.svg');      mask-image: url('/assets/icons/ubisoft.svg'); }
+.cd-platform-gog                         { background: #7c3aed; }
+.cd-platform-gog       .cd-platform-icon { -webkit-mask-image: url('/assets/icons/gogdotcom.svg');    mask-image: url('/assets/icons/gogdotcom.svg'); }
 .cd-game-meta {
   position: relative;
   z-index: 2;

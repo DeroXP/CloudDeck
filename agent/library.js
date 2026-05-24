@@ -88,6 +88,20 @@ export class Library {
       .filter(g => { if (seen.has(g.id)) return false; seen.add(g.id); return true; })
       .sort((a, b) => a.name.localeCompare(b.name));
 
+    // Steam name-match fallback: for non-Steam/Xbox games that don't carry
+    // their own art, search the Steam storefront and pick up Steam's box art
+    // + cached app id. The detail modal then queries Steam's storefront for
+    // a description. Runs in parallel; misses are silent.
+    await Promise.all(games.map(async g => {
+      if (g.platform === 'steam' || g.platform === 'xbox') return;
+      if (g.art && g.steamAppId) return;
+      const match = await this._steamSearch(g.name).catch(() => null);
+      if (match) {
+        g.steamAppId = match.id;
+        if (!g.art) g.art = STEAM_BOX_ART(match.id);
+      }
+    }));
+
     const breakdown = {};
     for (const g of games) breakdown[g.platform] = (breakdown[g.platform] || 0) + 1;
     console.log(`[library] total: ${games.length} games — ${Object.entries(breakdown).map(([p, n]) => `${p} ${n}`).join(', ')}`);
@@ -95,6 +109,35 @@ export class Library {
     this.cache = { games, scannedAt: Date.now() };
     this.cacheAt = Date.now();
     return this.cache;
+  }
+
+  // Cached Steam storefront search. Game names don't change so we cache for
+  // the lifetime of the agent process; misses are also cached so we don't
+  // re-query a known-no-match on every refresh.
+  async _steamSearch(name) {
+    if (!name) return null;
+    this._steamSearchCache ||= new Map();
+    if (this._steamSearchCache.has(name)) return this._steamSearchCache.get(name);
+    try {
+      const url = `https://store.steampowered.com/api/storesearch/?term=${encodeURIComponent(name)}&l=english&cc=US`;
+      const res = await fetch(url, { signal: AbortSignal.timeout(4000) });
+      if (!res.ok) { this._steamSearchCache.set(name, null); return null; }
+      const data = await res.json();
+      // Pick the first item whose name is a reasonable match — Steam's
+      // search returns lots of fuzzy hits and we don't want "Call of Duty: WW2"
+      // showing up when the user has plain "Call of Duty" installed.
+      const wantedNorm = normalizeAppName(name);
+      const hit = (data.items || []).find(it => {
+        const got = normalizeAppName(it.name);
+        return got === wantedNorm || got.startsWith(wantedNorm) || wantedNorm.startsWith(got);
+      }) || (data.items || [])[0];
+      const result = hit ? { id: String(hit.id), name: hit.name } : null;
+      this._steamSearchCache.set(name, result);
+      return result;
+    } catch {
+      this._steamSearchCache.set(name, null);
+      return null;
+    }
   }
 
   // ---- Steam ----

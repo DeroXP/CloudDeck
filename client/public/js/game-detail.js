@@ -71,10 +71,18 @@ export class GameDetailModule extends EventTarget {
     this._renderFull(game, meta, stats);
   }
 
-  // Dispatch to the right metadata fetcher based on platform.
+  // Dispatch to the right metadata fetcher. Order matters: we prefer the
+  // platform-native source (Steam for Steam, MS Store for Xbox), but for any
+  // other platform we fall back to whatever Steam app id the agent attached
+  // via name-matching during the library scan. That gives non-Steam titles
+  // like Battle.net Call of Duty real art + a real description through
+  // Steam's storefront.
   async _fetchMeta(game) {
-    if (game.platform === 'steam')  return this._fetchSteamMeta(game);
-    if (game.platform === 'xbox')   return this._fetchXboxMeta(game);
+    if (game.platform === 'steam') return this._fetchSteamMeta(game);
+    if (game.platform === 'xbox')  return this._fetchXboxMeta(game);
+    if (game.steamAppId) {
+      return this._fetchSteamMeta({ ...game, gameId: game.steamAppId });
+    }
     return null;
   }
 
