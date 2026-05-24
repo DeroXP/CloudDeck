@@ -1,7 +1,10 @@
 // User and role management. Two roles: 'admin' and 'guest'.
 
 import { randomUUID } from 'node:crypto';
-import bcrypt from 'bcrypt';
+// bcryptjs is API-compatible with bcrypt but pure-JS — no node-gyp toolchain
+// needed at install time, which keeps the Docker build small and avoids the
+// "python3 not found" failure on the alpine base image.
+import bcrypt from 'bcryptjs';
 
 const BCRYPT_ROUNDS = 12;
 
