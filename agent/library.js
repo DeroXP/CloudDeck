@@ -284,18 +284,25 @@ function slugify(s) {
 }
 
 // Filter out Steam's bundled tools/runtimes/redistributables that show up as
-// "installed apps" but aren't games.
+// "installed apps" but aren't games. Returns true if the entry should be
+// SKIPPED from the library grid. (Earlier version had this inverted —
+// SteamVR and Steamworks Common Redistributables were leaking through.)
+const STEAM_SYSTEM_APPIDS = new Set([
+  '228980',   // Steamworks Common Redistributables
+  '231350',   // Steamworks SDK Redist
+  '250820',   // SteamVR (runtime, not a game — VR titles auto-launch it)
+  // Steam Linux Runtimes
+  '1070560', '1391110', '1628350',
+  // Proton versions — every one of these gets installed as a "library" entry
+  '858280', '961940', '1054830', '1113280', '1245040',
+  '1420170', '1493710', '1887720', '2230260', '2348590',
+  '480',      // Spacewar, Steam's dev/test app
+]);
+
 function isSteamSystemApp(appid, name) {
-  const SYSTEM_APPIDS = new Set([
-    '228980',   // Steamworks Common Redistributables
-    '231350',   // Steamworks SDK Redist
-    '250820',   // SteamVR
-    '1070560',  // Steam Linux Runtime
-    '1391110',  // Steam Linux Runtime - Soldier
-    '1628350',  // Steam Linux Runtime - Sniper
-  ]);
-  if (SYSTEM_APPIDS.has(appid)) return false; // include these; they're benign and let the user decide
-  // Drop obvious non-game tool entries by name pattern
-  if (/^(Proton|Steam Linux Runtime|Steamworks)/i.test(name)) return true;
+  if (STEAM_SYSTEM_APPIDS.has(appid)) return true;
+  if (/^Proton\b/i.test(name)) return true;
+  if (/^Steam Linux Runtime/i.test(name)) return true;
+  if (/^Steamworks\b/i.test(name)) return true;
   return false;
 }

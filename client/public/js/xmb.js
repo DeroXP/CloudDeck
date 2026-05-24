@@ -16,6 +16,14 @@ export class XMB extends EventTarget {
     this.cats = document.getElementById('cats');
     this.catEls = [...this.cats.querySelectorAll('.cd-cat')];
 
+    // _renderItems can be called concurrently — once from setActive(0) during
+    // construction, and again the moment a renderer for the current category
+    // is registered. Without serialization both calls run the renderer and
+    // each appends its own grid, doubling the visible items. The token lets
+    // the latest call win and skips any stale work.
+    this._renderToken = 0;
+    this._inflightRender = null;
+
     this.catEls.forEach((el, idx) => {
       focus.register('xmb-cats', el);
       el.addEventListener('click', () => this.setActive(idx));
@@ -86,19 +94,34 @@ export class XMB extends EventTarget {
   }
 
   async _renderItems(category) {
-    this.items.classList.add('cd-items-fade');
-    await new Promise(r => setTimeout(r, 180));
-    this.items.innerHTML = '';
-    const renderer = this.renderers.get(category);
-    if (renderer) {
-      try { await renderer(this.items); }
-      catch (err) {
-        console.error('[xmb] renderer failed:', err);
-        this.items.innerHTML = `<div style="color:var(--cd-red); padding: 40px;">${err.message}</div>`;
-      }
-    } else {
-      this.items.innerHTML = '<div style="text-align:center; color: var(--cd-fg-dim); padding: 60px;">Coming soon</div>';
+    const myToken = ++this._renderToken;
+
+    // Wait for any in-flight render to finish so we don't append into a root
+    // that another renderer is also writing to. If a newer call has bumped
+    // the token while we were waiting, bail — its render will do the work.
+    if (this._inflightRender) {
+      try { await this._inflightRender; } catch { /* swallow prior errors */ }
     }
-    this.items.classList.remove('cd-items-fade');
+    if (myToken !== this._renderToken) return;
+
+    this._inflightRender = (async () => {
+      this.items.classList.add('cd-items-fade');
+      await new Promise(r => setTimeout(r, 180));
+      if (myToken !== this._renderToken) return;
+      this.items.innerHTML = '';
+      const renderer = this.renderers.get(category);
+      if (renderer) {
+        try { await renderer(this.items); }
+        catch (err) {
+          console.error('[xmb] renderer failed:', err);
+          this.items.innerHTML = `<div style="color:var(--cd-red); padding: 40px;">${err.message}</div>`;
+        }
+      } else {
+        this.items.innerHTML = '<div style="text-align:center; color: var(--cd-fg-dim); padding: 60px;">Coming soon</div>';
+      }
+      this.items.classList.remove('cd-items-fade');
+    })();
+    try { await this._inflightRender; }
+    finally { this._inflightRender = null; }
   }
 }
