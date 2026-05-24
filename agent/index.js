@@ -197,7 +197,14 @@ async function dispatch(type, payload = {}, { from } = {}) {
         await display.activateVirtual({ width: w, height: h, fps: payload.streamConfig.fps || 60 });
       }
       if (config.muteSpeakers) await audio.muteSpeakers().catch(() => {});
-      return launcher.launch(game);
+      const launched = await launcher.launch(game);
+      // Hand the browser a stream URL if the user has configured one
+      // (typically a moonlight-web or similar WebRTC bridge running locally).
+      // When empty the frontend shows its "install Moonlight" placeholder.
+      const streamUrl = config.sunshine.browserStreamUrl
+        ? sunshine.browserStreamUrl(config.sunshine.browserStreamUrl, game.gameId)
+        : null;
+      return { ...launched, streamUrl };
     }
 
     case 'close-game':

@@ -17,7 +17,12 @@ export const config = {
     url: process.env.SUNSHINE_URL || 'https://localhost:47990',
     username: process.env.SUNSHINE_USERNAME || 'admin',
     password: process.env.SUNSHINE_PASSWORD || '',
-    browserStreamUrl: process.env.SUNSHINE_BROWSER_STREAM_URL || 'https://localhost:47989',
+    // Empty by default — Sunshine itself does NOT serve a browser-playable
+    // stream. To embed the stream in CloudDeck's UI, point this at a
+    // WebRTC-to-Moonlight bridge (e.g. moonlight-web) reachable from the
+    // viewing device. When empty the frontend renders an "install Moonlight"
+    // placeholder instead.
+    browserStreamUrl: process.env.SUNSHINE_BROWSER_STREAM_URL || '',
   },
 
   steam: {

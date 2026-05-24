@@ -20,10 +20,16 @@ export class StreamModule extends EventTarget {
     this.freeze = document.getElementById('freeze');
 
     this.exitBtn = document.getElementById('exit-stream-btn');
+    this.fullscreenBtn = document.getElementById('fullscreen-btn');
 
     this.overlayBtn.addEventListener('click', () => this.toggleOverlay());
     this.exitBtn?.addEventListener('click', () => this.exitToXMB());
+    this.fullscreenBtn?.addEventListener('click', () => this.toggleFullscreen());
     input.addEventListener('home', () => this.toggleOverlay());
+
+    // Keep the button label in sync with browser fullscreen state, including
+    // when the user exits with the Esc key.
+    document.addEventListener('fullscreenchange', () => this._updateFullscreenBtn());
 
     // Esc / B button while a stream is active: close the overlay first if it's
     // open, otherwise tear the whole session down. This is the escape hatch
@@ -60,23 +66,66 @@ export class StreamModule extends EventTarget {
     this.streamEl.classList.add('cd-stream-active');
     this.overlayBtn.classList.remove('cd-hidden');
     this.exitBtn?.classList.remove('cd-hidden');
+    this.fullscreenBtn?.classList.remove('cd-hidden');
     document.getElementById('xmb').classList.add('cd-xmb-hidden');
 
-    // If we got an explicit URL (Sunshine browser client), embed it. Otherwise
-    // we render a placeholder explaining the connection.
     if (streamUrl) {
       this.streamFrame.src = streamUrl;
     } else {
-      this.streamFrame.src = 'data:text/html;charset=utf-8,' + encodeURIComponent(`
-        <html><body style="background:#000;color:#aab3c8;font-family:system-ui;margin:0;display:grid;place-items:center;height:100vh;">
-          <div style="text-align:center;">
-            <h2 style="color:#e63946;">Stream not configured</h2>
-            <p>Sunshine browser client URL not set. Run Moonlight or open Sunshine's web stream directly.</p>
-            <p style="font-size:12px;color:#aab3c8;">Now playing: ${game?.name || 'Unknown'}</p>
-          </div>
-        </body></html>
-      `);
+      this.streamFrame.src = this._placeholderUrl(game);
     }
+
+    // Best-effort fullscreen — needs to be on the same task as the user gesture
+    // that triggered launch, or Safari/Firefox will block it. Failing is fine;
+    // the manual button is the fallback.
+    try { await this.streamEl.requestFullscreen?.({ navigationUI: 'hide' }); }
+    catch { /* user can hit the fullscreen button manually */ }
+    this._updateFullscreenBtn();
+  }
+
+  _placeholderUrl(game) {
+    // Honest, helpful explanation — we hit this when the agent didn't ship a
+    // streamUrl back, which means Sunshine is launching the game on the PC
+    // but there's no browser viewer wired up. Tell the user what to install.
+    const name = (game?.name || 'Unknown').replace(/[<>"']/g, '');
+    return 'data:text/html;charset=utf-8,' + encodeURIComponent(`<!doctype html>
+<html><head><meta name="viewport" content="width=device-width,initial-scale=1"><style>
+body{background:#0a0e1a;color:#f4f6fb;font-family:system-ui,-apple-system,sans-serif;margin:0;padding:24px;min-height:100vh;display:flex;align-items:center;justify-content:center;box-sizing:border-box;line-height:1.5}
+.box{max-width:520px;background:rgba(20,24,40,0.7);border:1px solid rgba(255,255,255,0.07);border-radius:14px;padding:28px;backdrop-filter:blur(10px)}
+h1{margin:0 0 4px;color:#e63946;font-size:18px;letter-spacing:3px;text-transform:uppercase}
+h2{margin:0 0 18px;font-size:13px;color:#aab3c8;letter-spacing:2px;text-transform:uppercase;font-weight:400}
+p{font-size:14px;color:#cdd5e6;margin:8px 0}
+ol{font-size:14px;color:#cdd5e6;padding-left:20px}
+li{margin:6px 0}
+code{background:rgba(255,255,255,0.06);padding:2px 6px;border-radius:4px;font-size:12px}
+.now{margin-top:18px;padding-top:14px;border-top:1px solid rgba(255,255,255,0.07);font-size:12px;color:#aab3c8}
+a{color:#4c95ff}
+</style></head><body><div class="box">
+<h1>Launched on PC</h1><h2>No in-browser viewer configured</h2>
+<p>Sunshine is hosting the stream on your PC, but Sunshine doesn't ship a browser client — the easiest way to view it is the <strong>Moonlight</strong> app.</p>
+<ol>
+  <li>Install <a href="https://moonlight-stream.org/" target="_blank">Moonlight</a> on the device you want to play from (Android, iOS, Windows, macOS, Linux).</li>
+  <li>Open Moonlight on the same network as your PC and tap the PC tile (or add it by IP if it doesn't auto-discover).</li>
+  <li>Pair using the PIN that Sunshine prompts for at <code>https://&lt;your-pc&gt;:47990</code>.</li>
+  <li>Pick the running game and start streaming.</li>
+</ol>
+<p>To embed the stream <em>here</em> in CloudDeck instead of in Moonlight, set <code>SUNSHINE_BROWSER_STREAM_URL</code> in <code>agent/.env</code> to a browser-WebRTC bridge like <a href="https://github.com/games-on-whales/moonlight-web" target="_blank">moonlight-web</a> running on your PC.</p>
+<div class="now">Now playing: <strong>${name}</strong></div>
+</div></body></html>`);
+  }
+
+  toggleFullscreen() {
+    if (document.fullscreenElement) {
+      document.exitFullscreen?.();
+    } else {
+      this.streamEl.requestFullscreen?.({ navigationUI: 'hide' })
+        .catch(err => console.warn('[stream] fullscreen request rejected:', err.message));
+    }
+  }
+
+  _updateFullscreenBtn() {
+    if (!this.fullscreenBtn) return;
+    this.fullscreenBtn.textContent = document.fullscreenElement ? '⤡ Exit Fullscreen' : '⤢ Fullscreen';
   }
 
   async stopStream({ frame = null, glitch = false } = {}) {
@@ -97,9 +146,11 @@ export class StreamModule extends EventTarget {
     this.streamEl.classList.remove('cd-stream-active');
     this.overlayBtn.classList.add('cd-hidden');
     this.exitBtn?.classList.add('cd-hidden');
+    this.fullscreenBtn?.classList.add('cd-hidden');
     this.overlay.classList.remove('cd-overlay-active');
     document.getElementById('xmb').classList.remove('cd-xmb-hidden');
     this.streamFrame.src = 'about:blank';
+    if (document.fullscreenElement) document.exitFullscreen?.().catch(() => {});
   }
 
   toggleOverlay() {

@@ -92,19 +92,22 @@
     </div>
   </main>
 
-  <!-- Stream -->
+  <!-- Stream — everything in here stays visible when the browser is in
+       fullscreen, because :fullscreen hides every element except the one we
+       called requestFullscreen() on and its descendants. -->
   <div class="cd-stream" id="stream">
     <iframe id="stream-frame" allow="autoplay; fullscreen; gamepad; microphone *; clipboard-read; clipboard-write" allowfullscreen></iframe>
     <div class="cd-stream-freeze cd-hidden" id="freeze"></div>
-  </div>
-  <button class="cd-overlay-btn cd-hidden" id="overlay-btn">⠿ Library</button>
-  <button class="cd-overlay-btn cd-overlay-btn-exit cd-hidden" id="exit-stream-btn">× Exit Stream</button>
 
-  <!-- Library overlay (rendered inside stream) -->
-  <div class="cd-overlay" id="overlay">
-    <div class="cd-overlay-inner">
-      <h2 style="margin-top:0; letter-spacing: 4px;">Library</h2>
-      <div class="cd-games" id="overlay-games"></div>
+    <button class="cd-overlay-btn cd-hidden" id="overlay-btn">⠿ Library</button>
+    <button class="cd-overlay-btn cd-overlay-btn-fs cd-hidden" id="fullscreen-btn">⤢ Fullscreen</button>
+    <button class="cd-overlay-btn cd-overlay-btn-exit cd-hidden" id="exit-stream-btn">× Exit Stream</button>
+
+    <div class="cd-overlay" id="overlay">
+      <div class="cd-overlay-inner">
+        <h2 style="margin-top:0; letter-spacing: 4px;">Library</h2>
+        <div class="cd-games" id="overlay-games"></div>
+      </div>
     </div>
   </div>
 

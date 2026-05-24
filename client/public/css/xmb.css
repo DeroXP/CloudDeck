@@ -594,6 +594,18 @@ input:focus, select:focus {
 .cd-overlay-btn-exit:hover, .cd-overlay-btn-exit.cd-focused {
   background: rgba(230, 57, 70, 0.15);
 }
+/* Fullscreen toggle sits between exit (left) and library (right). */
+.cd-overlay-btn-fs {
+  right: 130px;   /* leaves room for "⠿ Library" pill on the far right */
+}
+.cd-overlay-btn-fs:fullscreen,
+.cd-stream:fullscreen .cd-overlay-btn,
+:fullscreen .cd-overlay-btn {
+  /* When the stream element is in fullscreen, the floating buttons can stay
+     in their fixed-position layout because :fullscreen makes the element
+     cover the entire viewport. No special override needed beyond keeping
+     them visible. */
+}
 
 .cd-overlay {
   position: fixed;
