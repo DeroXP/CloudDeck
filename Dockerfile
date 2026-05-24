@@ -15,9 +15,6 @@ WORKDIR /app
 ENV NODE_ENV=production
 ENV DATA_DIR=/data
 
-# Non-root user for the app
-RUN addgroup -S app && adduser -S -G app app
-
 COPY --from=deps /app/client/node_modules ./client/node_modules
 COPY client ./client
 COPY .env.example ./
@@ -29,9 +26,11 @@ COPY .env.example ./
 # build time). Instead create the directory and rely on the Railway-managed
 # volume being mounted at /data at runtime. For docker-compose / local
 # runs the named volume in docker-compose.yml covers the same purpose.
-RUN mkdir -p /data && chown -R app:app /data /app
-
-USER app
+#
+# We also run as root (no USER directive). Railway-managed volumes mount
+# owned by root and the platform doesn't give us a hook to chown them at
+# startup. For a single-tenant homelab app the container isolation is enough.
+RUN mkdir -p /data
 
 EXPOSE 3000
 HEALTHCHECK --interval=30s --timeout=4s --start-period=5s --retries=3 \
