@@ -181,6 +181,73 @@ input:focus, select:focus {
   100% { transform: translate3d(30%, 30%, 0); }
 }
 
+/* --- Bokeh orbs --- Big soft-blurred warm circles that drift slowly
+   across the screen, replacing the busy floating-glyph layer with a more
+   atmospheric kind of depth. Each orb is a single span with a radial
+   gradient background and a heavy CSS blur — no SVG needed. */
+.cd-bg-bokeh {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  overflow: hidden;
+  z-index: 1;
+}
+.cd-bokeh {
+  position: absolute;
+  border-radius: 50%;
+  filter: blur(70px);
+  opacity: 0.55;
+  will-change: transform;
+}
+.cd-bokeh-1 {
+  width: 36vmin;
+  height: 36vmin;
+  top: -8vmin;
+  left: -6vmin;
+  background: radial-gradient(circle at center, rgba(255, 110, 140, 0.9), transparent 65%);
+  animation: cd-bokeh-drift-1 38s cubic-bezier(0.45, 0, 0.55, 1) infinite;
+}
+.cd-bokeh-2 {
+  width: 44vmin;
+  height: 44vmin;
+  top: 30vh;
+  right: -10vmin;
+  background: radial-gradient(circle at center, rgba(255, 170, 100, 0.6), transparent 65%);
+  animation: cd-bokeh-drift-2 46s cubic-bezier(0.45, 0, 0.55, 1) infinite;
+}
+.cd-bokeh-3 {
+  width: 50vmin;
+  height: 50vmin;
+  bottom: -14vmin;
+  left: 18vw;
+  background: radial-gradient(circle at center, rgba(230, 70, 90, 0.7), transparent 65%);
+  animation: cd-bokeh-drift-3 52s cubic-bezier(0.45, 0, 0.55, 1) infinite;
+}
+.cd-bokeh-4 {
+  width: 30vmin;
+  height: 30vmin;
+  top: 8vh;
+  left: 48vw;
+  background: radial-gradient(circle at center, rgba(255, 200, 220, 0.45), transparent 65%);
+  animation: cd-bokeh-drift-4 42s cubic-bezier(0.45, 0, 0.55, 1) infinite;
+}
+@keyframes cd-bokeh-drift-1 {
+  0%, 100% { transform: translate3d(0, 0, 0)             scale(1); }
+  50%      { transform: translate3d(18vmin, 22vmin, 0)   scale(1.15); }
+}
+@keyframes cd-bokeh-drift-2 {
+  0%, 100% { transform: translate3d(0, 0, 0)             scale(1); }
+  50%      { transform: translate3d(-22vmin, 14vmin, 0)  scale(0.9); }
+}
+@keyframes cd-bokeh-drift-3 {
+  0%, 100% { transform: translate3d(0, 0, 0)             scale(1); }
+  50%      { transform: translate3d(14vmin, -18vmin, 0)  scale(1.1); }
+}
+@keyframes cd-bokeh-drift-4 {
+  0%, 100% { transform: translate3d(0, 0, 0)             scale(1); }
+  50%      { transform: translate3d(-16vmin, 20vmin, 0)  scale(1.2); }
+}
+
 /* --- Vignette: subtle darkening at the edges --- */
 .cd-bg-vignette {
   position: absolute;
@@ -192,7 +259,7 @@ input:focus, select:focus {
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .cd-bg-halo, .cd-wave, .cd-bg-sweep { animation: none; }
+  .cd-bg-halo, .cd-wave, .cd-bg-sweep, .cd-bokeh { animation: none; }
 }
 
 /* Mobile background calmed: hide the diagonal sweep entirely, slow the wave
@@ -208,6 +275,13 @@ input:focus, select:focus {
   .cd-wave-d { animation-duration: 30s; }
   .cd-wave-e { animation-duration: 34s; }
   .cd-bg-waves { filter: none; }
+  /* Bokeh on mobile: slower drift, lighter blur, lower opacity so it adds
+     warmth without dominating a small screen. */
+  .cd-bokeh { filter: blur(45px); opacity: 0.4; }
+  .cd-bokeh-1 { animation-duration: 60s; }
+  .cd-bokeh-2 { animation-duration: 70s; }
+  .cd-bokeh-3 { animation-duration: 80s; }
+  .cd-bokeh-4 { animation-duration: 65s; }
 }
 
 /* ============================================================
@@ -1346,13 +1420,38 @@ body.cd-input-controller .cd-hints .cd-hint-key { display: none; }
     gap: 8px;
   }
 
-  .cd-settings { max-width: 100%; padding-right: 4px; }
+  /* Compact Settings on mobile — tight spacing, smaller text, hint lines
+     de-emphasized so the whole panel fits more on screen at once and feels
+     like a phone settings list rather than a desktop form. */
+  .cd-settings { max-width: 100%; padding-right: 2px; font-size: 14px; }
+  .cd-settings-section { margin-bottom: 16px; padding-bottom: 14px; border-bottom: 1px solid var(--cd-border); }
+  .cd-settings-section:last-of-type { border-bottom: none; }
+  .cd-settings-section h3 {
+    font-size: 10px;
+    letter-spacing: 2px;
+    margin: 0 0 10px 0;
+  }
   .cd-field {
     grid-template-columns: 1fr;
-    gap: 6px;
-    margin-bottom: 16px;
+    gap: 4px;
+    margin-bottom: 10px;
+    font-size: 13px;
   }
-  .cd-settings-section { margin-bottom: 22px; }
+  .cd-field-label { font-size: 11px; }
+  .cd-field input,
+  .cd-field select {
+    padding: 8px 10px;
+    font-size: 13px;
+  }
+  .cd-field-hint {
+    font-size: 10px;
+    margin: -4px 0 6px 0;
+    opacity: 0.5;
+    line-height: 1.4;
+  }
+  .cd-help {
+    width: 12px; height: 12px; font-size: 8px;
+  }
 
   /* Bottom tab bar — sticks to the bottom of the viewport, respecting
      the iOS safe area (notch / home indicator). */

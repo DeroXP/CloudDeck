@@ -16,6 +16,10 @@ const STEAM_CAPSULE = id => `https://cdn.cloudflare.steamstatic.com/steam/apps/$
 // proxy (/api/steam-meta/:appid) which forwards + caches the response.
 const STEAM_STOREFRONT = id => `/api/steam-meta/${encodeURIComponent(id)}`;
 
+// Microsoft Store displaycatalog proxy for Xbox titles. Also CORS-restricted
+// when hit directly from the browser, so we route through the server.
+const XBOX_CATALOG = id => `/api/xbox-meta/${encodeURIComponent(id)}`;
+
 export class GameDetailModule extends EventTarget {
   constructor({ realtime }) {
     super();
@@ -62,9 +66,16 @@ export class GameDetailModule extends EventTarget {
     // Fire fetches in parallel; render as each lands.
     const [stats, meta] = await Promise.all([
       api.gameStats(game.gameId || game.id).catch(() => null),
-      this._fetchSteamMeta(game).catch(() => null),
+      this._fetchMeta(game).catch(() => null),
     ]);
     this._renderFull(game, meta, stats);
+  }
+
+  // Dispatch to the right metadata fetcher based on platform.
+  async _fetchMeta(game) {
+    if (game.platform === 'steam')  return this._fetchSteamMeta(game);
+    if (game.platform === 'xbox')   return this._fetchXboxMeta(game);
+    return null;
   }
 
   close() {
@@ -76,10 +87,10 @@ export class GameDetailModule extends EventTarget {
   }
 
   async _fetchSteamMeta(game) {
-    if (game.platform !== 'steam' || !game.gameId) return null;
+    if (!game.gameId) return null;
     const res = await fetch(STEAM_STOREFRONT(game.gameId), {
       signal: AbortSignal.timeout(8000),
-      credentials: 'include',   // server-side proxy is auth-protected
+      credentials: 'include',
     });
     if (!res.ok) return null;
     const data = await res.json();
@@ -92,6 +103,43 @@ export class GameDetailModule extends EventTarget {
       capsule: STEAM_CAPSULE(game.gameId),
       screenshots: (d.screenshots || []).slice(0, 12).map(s => s.path_full),
       genres: (d.genres || []).map(g => g.description),
+    };
+  }
+
+  // MS Store catalog lookup. game.gameId for Xbox is the ProductId
+  // (e.g. "9P0BJSGTBJTG"). The catalog response uses the same Images
+  // array as the library scanner — we just filter for Screenshot purpose
+  // here instead of Poster.
+  async _fetchXboxMeta(game) {
+    if (!game.gameId) return null;
+    // ProductIds are 12 alphanumeric chars; skip the synthetic slug ids
+    // that the agent falls back to when no MS Store hit was found.
+    if (!/^[A-Za-z0-9]{12}$/.test(game.gameId)) return null;
+    const res = await fetch(XBOX_CATALOG(game.gameId), {
+      signal: AbortSignal.timeout(8000),
+      credentials: 'include',
+    });
+    if (!res.ok) return null;
+    const data = await res.json();
+    const product = data?.Products?.[0];
+    if (!product) return null;
+    const loc = product.LocalizedProperties?.[0] || {};
+    const images = loc.Images || [];
+    const fixUri = u => u?.startsWith('//') ? `https:${u}` : u;
+    const hero = images.find(i => i.ImagePurpose === 'SuperHeroArt')
+      || images.find(i => i.ImagePurpose === 'Hero')
+      || images.find(i => i.ImagePurpose === 'FeaturePromotionalSquareArt')
+      || images.find(i => i.ImagePurpose === 'Poster')
+      || images.find(i => i.ImagePurpose === 'BoxArt');
+    const screenshots = images
+      .filter(i => i.ImagePurpose === 'Screenshot')
+      .slice(0, 12)
+      .map(i => fixUri(i.Uri));
+    return {
+      description: stripHtml(loc.ProductDescription || loc.ShortDescription || ''),
+      hero: fixUri(hero?.Uri) || null,
+      screenshots,
+      genres: (product.Properties?.Categories || []).slice(0, 6),
     };
   }
 
@@ -172,9 +220,7 @@ export class GameDetailModule extends EventTarget {
     if (meta?.description) {
       set('desc', meta.description);
     } else {
-      set('desc', game.platform === 'xbox'
-        ? 'No description available (Xbox / Game Pass titles don\'t expose one through a public API).'
-        : 'No description available.');
+      set('desc', 'No description available.');
     }
 
     // Gallery

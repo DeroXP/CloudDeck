@@ -17,17 +17,18 @@ export class Stats {
   }
 
   async snapshot() {
-    const [cpu, mem, gpu, currentLoad] = await Promise.all([
-      si.cpuTemperature().catch(() => null),
+    const [mem, gpu, currentLoad, disks] = await Promise.all([
       si.mem().catch(() => null),
       this._gpu(),
       si.currentLoad().catch(() => null),
+      si.fsSize().catch(() => []),
     ]);
 
+    // CPU temp removed — Windows doesn't expose it without OpenHardwareMonitor
+    // running, so the field was always "—" for everyone. Cleaner to omit.
     return {
       cpu: {
         usage: currentLoad?.currentLoad ?? null,
-        temp: cpu?.main ?? null,
       },
       ram: {
         used: mem ? mem.used : null,
@@ -36,6 +37,16 @@ export class Stats {
       },
       gpu,
       fans: gpu?.fans ?? null,
+      disks: (disks || [])
+        // Keep only real local fixed disks — skip CD drives, network mounts, etc.
+        .filter(d => d.size > 0 && /^[A-Z]:/.test(d.mount))
+        .map(d => ({
+          mount: d.mount,
+          fs: d.fs,
+          used: d.used,
+          size: d.size,
+          percent: Math.round((d.used / d.size) * 100),
+        })),
       timestamp: Date.now(),
     };
   }

@@ -258,6 +258,30 @@ app.get('/api/sessions', auth.requireAuth, (req, res) => {
   res.json({ sessions: store.getRecentSessions(req.user.sub, 50) });
 });
 
+// Microsoft Store displaycatalog proxy — feeds the game-detail modal with
+// description + screenshots for Xbox / Game Pass titles. Same cached forward
+// pattern as the Steam one below.
+const xboxMetaCache = new Map();   // productId -> { data, at }
+const XBOX_META_TTL = 6 * 60 * 60 * 1000;
+app.get('/api/xbox-meta/:productId', auth.requireAuth, async (req, res) => {
+  const productId = req.params.productId.replace(/[^A-Za-z0-9-]/g, '');
+  if (!productId) return res.status(400).json({ error: 'Invalid productId' });
+  const cached = xboxMetaCache.get(productId);
+  if (cached && Date.now() - cached.at < XBOX_META_TTL) return res.json(cached.data);
+  try {
+    const r = await fetch(
+      `https://displaycatalog.mp.microsoft.com/v7.0/products/${productId}?market=US&languages=en-US`,
+      { signal: AbortSignal.timeout(8000) },
+    );
+    if (!r.ok) return res.status(r.status).json({ error: `MS Store ${r.status}` });
+    const data = await r.json();
+    xboxMetaCache.set(productId, { data, at: Date.now() });
+    res.json(data);
+  } catch (err) {
+    res.status(502).json({ error: err.message });
+  }
+});
+
 // Steam Storefront API proxy. The public API is not CORS-open so the browser
 // can't hit it directly; we forward the request and return whatever Steam
 // gives us. Cheap to cache — game metadata barely changes.
