@@ -106,11 +106,18 @@ a{color:#4c95ff}
   }
 
   _parsecPlaceholderBody(name) {
+    // Parsec doesn't expose a public custom URL scheme on iOS/Android that
+    // we can deep-link into reliably, so we don't pretend with a button.
+    // Plain instructions + App Store / Play Store links instead.
     return `
 <h1>Launched on PC</h1><h2>Open Parsec to view</h2>
-<p><strong>${name}</strong> is now running on your gaming PC. Tap the button below to open the Parsec app on this device — your PC should appear in the host list (signed into the same Parsec account), tap it to start streaming.</p>
-<p style="text-align:center"><a class="btn" href="parsec:" target="_blank">Open Parsec →</a></p>
-<p style="font-size:12px;color:#aab3c8">First time? Install Parsec from the <a href="https://parsec.app/downloads" target="_blank">App Store / Play Store / parsec.app/downloads</a> and sign in with the same account you used on the PC. The PC will auto-discover.</p>
+<p><strong>${name}</strong> is now running on your gaming PC. Open the <strong>Parsec</strong> app on this device, sign in with the same account you used on your PC, and tap your PC in the host list to start streaming.</p>
+<p style="font-size:13px">Don't have Parsec installed yet?</p>
+<p style="display:flex;gap:10px;flex-wrap:wrap">
+  <a class="btn" href="https://apps.apple.com/app/parsec/id1330954781" target="_blank" style="padding:10px 18px;font-size:13px">iOS App Store</a>
+  <a class="btn" href="https://play.google.com/store/apps/details?id=tv.parsec.client" target="_blank" style="padding:10px 18px;font-size:13px">Google Play</a>
+  <a class="btn" href="https://parsec.app/downloads" target="_blank" style="padding:10px 18px;font-size:13px;background:transparent;border:1px solid #4c95ff;color:#4c95ff">Other platforms</a>
+</p>
 <div class="now">Now playing: <strong>${name}</strong></div>`;
   }
 
