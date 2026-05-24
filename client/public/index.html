@@ -12,42 +12,67 @@
 </head>
 <body class="cd-input-mouse">
 
-  <!-- PlayStation-XMB-style animated background: layered translucent waves
-       on a deep blue gradient, with floating PS button glyphs.
-       Pure CSS / SVG, no JS, ~no GPU cost. -->
+  <!-- Animated background: deep crimson gradient + layered translucent red
+       ribbons + floating face-button glyphs + slow pulsing halo + vignette.
+       Pure CSS / SVG, no JS. -->
   <div class="cd-bg">
+    <!-- Pulsing halo behind everything for depth -->
+    <div class="cd-bg-halo" aria-hidden="true"></div>
+
+    <!-- Five wave ribbons in varying red tones, drifting independently -->
     <svg class="cd-bg-waves" viewBox="0 0 1920 1080" preserveAspectRatio="none" aria-hidden="true">
       <defs>
         <linearGradient id="cdw1" x1="0%" y1="0%" x2="100%" y2="0%">
-          <stop offset="0%"   stop-color="#7ec8ff" stop-opacity="0"/>
-          <stop offset="50%"  stop-color="#7ec8ff" stop-opacity="0.45"/>
-          <stop offset="100%" stop-color="#7ec8ff" stop-opacity="0"/>
+          <stop offset="0%"   stop-color="#ff6680" stop-opacity="0"/>
+          <stop offset="50%"  stop-color="#ff6680" stop-opacity="0.55"/>
+          <stop offset="100%" stop-color="#ff6680" stop-opacity="0"/>
         </linearGradient>
         <linearGradient id="cdw2" x1="0%" y1="0%" x2="100%" y2="0%">
-          <stop offset="0%"   stop-color="#a8dcff" stop-opacity="0"/>
-          <stop offset="50%"  stop-color="#a8dcff" stop-opacity="0.32"/>
-          <stop offset="100%" stop-color="#a8dcff" stop-opacity="0"/>
+          <stop offset="0%"   stop-color="#ffb0c0" stop-opacity="0"/>
+          <stop offset="50%"  stop-color="#ffb0c0" stop-opacity="0.4"/>
+          <stop offset="100%" stop-color="#ffb0c0" stop-opacity="0"/>
         </linearGradient>
         <linearGradient id="cdw3" x1="0%" y1="0%" x2="100%" y2="0%">
-          <stop offset="0%"   stop-color="#5ba8ff" stop-opacity="0"/>
-          <stop offset="50%"  stop-color="#5ba8ff" stop-opacity="0.25"/>
-          <stop offset="100%" stop-color="#5ba8ff" stop-opacity="0"/>
+          <stop offset="0%"   stop-color="#e63946" stop-opacity="0"/>
+          <stop offset="50%"  stop-color="#e63946" stop-opacity="0.35"/>
+          <stop offset="100%" stop-color="#e63946" stop-opacity="0"/>
+        </linearGradient>
+        <linearGradient id="cdw4" x1="0%" y1="0%" x2="100%" y2="0%">
+          <stop offset="0%"   stop-color="#ff9080" stop-opacity="0"/>
+          <stop offset="50%"  stop-color="#ff9080" stop-opacity="0.3"/>
+          <stop offset="100%" stop-color="#ff9080" stop-opacity="0"/>
+        </linearGradient>
+        <linearGradient id="cdw5" x1="0%" y1="0%" x2="100%" y2="0%">
+          <stop offset="0%"   stop-color="#c01838" stop-opacity="0"/>
+          <stop offset="50%"  stop-color="#c01838" stop-opacity="0.45"/>
+          <stop offset="100%" stop-color="#c01838" stop-opacity="0"/>
         </linearGradient>
       </defs>
       <path class="cd-wave cd-wave-a" d="M-100,540 C400,380 900,720 1400,540 C1700,440 1900,600 2100,540 L2100,560 C1900,620 1700,460 1400,560 C900,740 400,400 -100,560 Z" fill="url(#cdw1)"/>
       <path class="cd-wave cd-wave-b" d="M-100,560 C500,720 1000,360 1500,560 C1750,660 1950,500 2100,560 L2100,580 C1950,520 1750,680 1500,580 C1000,380 500,740 -100,580 Z" fill="url(#cdw2)"/>
       <path class="cd-wave cd-wave-c" d="M-100,520 C600,660 1100,400 1700,520 C1850,550 1950,490 2100,520 L2100,540 C1950,510 1850,570 1700,540 C1100,420 600,680 -100,540 Z" fill="url(#cdw3)"/>
+      <path class="cd-wave cd-wave-d" d="M-100,580 C350,460 850,700 1350,580 C1650,505 1850,650 2100,580 L2100,600 C1850,670 1650,525 1350,600 C850,720 350,480 -100,600 Z" fill="url(#cdw4)"/>
+      <path class="cd-wave cd-wave-e" d="M-100,500 C450,640 950,360 1450,500 C1700,570 1900,440 2100,500 L2100,520 C1900,460 1700,590 1450,520 C950,380 450,660 -100,520 Z" fill="url(#cdw5)"/>
     </svg>
+
+    <!-- Floating face-button glyphs with individual drift loops -->
     <div class="cd-bg-shapes" aria-hidden="true">
-      <span class="cd-ps-shape" style="top:14%;left:12%;animation-delay:0s">✕</span>
-      <span class="cd-ps-shape" style="top:28%;right:18%;animation-delay:-4s">○</span>
-      <span class="cd-ps-shape" style="top:62%;left:22%;animation-delay:-8s">□</span>
-      <span class="cd-ps-shape" style="top:78%;right:14%;animation-delay:-12s">△</span>
-      <span class="cd-ps-shape" style="top:45%;left:55%;animation-delay:-2s">✕</span>
-      <span class="cd-ps-shape" style="top:18%;right:35%;animation-delay:-6s">□</span>
-      <span class="cd-ps-shape" style="top:82%;left:42%;animation-delay:-10s">○</span>
-      <span class="cd-ps-shape" style="top:35%;left:8%;animation-delay:-14s">△</span>
+      <span class="cd-ps-shape" style="top:9%;left:8%;animation-delay:0s">✕</span>
+      <span class="cd-ps-shape" style="top:16%;right:14%;animation-delay:-3s">○</span>
+      <span class="cd-ps-shape" style="top:26%;left:38%;animation-delay:-6s">□</span>
+      <span class="cd-ps-shape" style="top:32%;right:32%;animation-delay:-9s">△</span>
+      <span class="cd-ps-shape" style="top:44%;left:18%;animation-delay:-12s">✕</span>
+      <span class="cd-ps-shape" style="top:58%;left:62%;animation-delay:-2s">□</span>
+      <span class="cd-ps-shape" style="top:64%;right:22%;animation-delay:-5s">○</span>
+      <span class="cd-ps-shape" style="top:72%;left:30%;animation-delay:-8s">△</span>
+      <span class="cd-ps-shape" style="top:80%;right:42%;animation-delay:-11s">✕</span>
+      <span class="cd-ps-shape" style="top:86%;left:12%;animation-delay:-14s">○</span>
+      <span class="cd-ps-shape" style="top:50%;right:6%;animation-delay:-17s">□</span>
+      <span class="cd-ps-shape" style="top:22%;left:72%;animation-delay:-20s">△</span>
     </div>
+
+    <!-- Subtle vignette to anchor focus in the middle -->
+    <div class="cd-bg-vignette" aria-hidden="true"></div>
   </div>
 
   <!-- Boot screen -->
