@@ -56,8 +56,8 @@ export class DashboardModule {
         <div><span class="cd-dash-value" data-k="ping-value">—</span><span class="cd-dash-unit">ms</span></div>
         <div class="cd-dash-label" style="margin-top:10px;">Jitter <span data-k="ping-jitter">—</span> ms</div>
       </div>
-      <!-- Disk cards inserted here at render-time, one per drive -->
-      <div data-k="disks-mount"></div>
+      <!-- Disk cards get appended here (tagged .cd-dash-disk-card so we can
+           clear and re-render on each stats push without accumulating). -->
     `;
   }
 
@@ -102,21 +102,21 @@ export class DashboardModule {
   }
 
   _renderDisks(disks) {
-    if (!this.rendered) return;
-    const mount = this.rendered.querySelector('[data-k="disks-mount"]');
-    if (!mount || !disks) return;
-    mount.innerHTML = disks.map(d => `
-      <div class="cd-dash-card">
+    if (!this.rendered || !disks) return;
+    // Remove any previously-rendered disk cards before adding fresh ones —
+    // otherwise every 2.5s stats push appends a new set and the dashboard
+    // grows forever.
+    this.rendered.querySelectorAll('.cd-dash-disk-card').forEach(el => el.remove());
+    for (const d of disks) {
+      const card = document.createElement('div');
+      card.className = 'cd-dash-card cd-dash-disk-card';
+      card.innerHTML = `
         <div class="cd-dash-label">Drive ${escapeHtml(d.mount)}</div>
         <div><span class="cd-dash-value">${d.percent}</span><span class="cd-dash-unit">%</span></div>
         <div class="cd-dash-meter"><div class="cd-dash-meter-fill" style="width:${d.percent}%"></div></div>
-        <div class="cd-dash-label" style="margin-top:10px;">${gb(d.used)} GB / ${gb(d.size)} GB free ${gb(d.size - d.used)} GB</div>
-      </div>
-    `).join('');
-    // Re-parent the disk cards into the grid itself instead of nested
-    // inside a wrapper div, so they're true grid items.
-    while (mount.firstChild) {
-      this.rendered.insertBefore(mount.firstChild, mount);
+        <div class="cd-dash-label" style="margin-top:10px;">${gb(d.used)} GB / ${gb(d.size)} GB · free ${gb(d.size - d.used)} GB</div>
+      `;
+      this.rendered.appendChild(card);
     }
   }
 
