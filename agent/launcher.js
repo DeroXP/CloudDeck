@@ -89,9 +89,12 @@ export class Launcher {
         return;
       }
       const procs = await listProcesses().catch(() => []);
-      // Heuristic: pick the most CPU-heavy process started within the last
-      // 60 seconds that isn't a known system binary. This isn't perfect but
-      // covers the common case where the launcher → game.exe handoff happens.
+      // this.current may have been cleared while we were awaiting (game
+      // ended, user hit "× Exit Stream"). Re-check before touching it.
+      if (!this.current) {
+        clearInterval(this.pollHandle);
+        return;
+      }
       const candidate = this._matchGameProcess(procs, this.current);
 
       if (candidate && !detectedPid) {
@@ -127,6 +130,7 @@ export class Launcher {
   }
 
   _matchGameProcess(procs, current) {
+    if (!current) return null;   // defense-in-depth — caller already checks
     const startedAfter = current.startedAt - 5000;
     const ignored = new Set([
       'cmd.exe', 'conhost.exe', 'powershell.exe', 'steam.exe', 'steamwebhelper.exe',
