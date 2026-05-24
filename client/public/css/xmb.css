@@ -121,7 +121,9 @@ input:focus, select:focus {
 .cd-wave {
   transform-origin: center center;
   will-change: transform;
-  mix-blend-mode: screen;   /* lets ribbons brighten where they overlap */
+  /* mix-blend-mode: screen was here but flattens motion in some Safari
+     versions — using plain alpha blending now, which guarantees visible
+     translation regardless of background sampling. */
 }
 .cd-wave-a { animation: cd-wave-flow-a 5s ease-in-out infinite; }
 .cd-wave-b { animation: cd-wave-flow-b 7s ease-in-out infinite; }
