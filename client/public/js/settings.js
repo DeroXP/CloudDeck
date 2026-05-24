@@ -36,59 +36,67 @@ export class SettingsModule {
     wrap.innerHTML = `
       <div class="cd-settings-section">
         <h3>Stream</h3>
-        <div class="cd-field">
-          <label class="cd-field-label">Resolution</label>
-          <select id="set-res">
+        <div class="cd-field" title="Resolution Sunshine encodes the stream at. Higher = sharper, more bandwidth + GPU load. Pick a value your PC and your network can both sustain.">
+          <label class="cd-field-label">Resolution <span class="cd-help">?</span></label>
+          <select id="set-res" title="Stream resolution. 1080p is the safe default; 1440p needs ~30 Mbps; 4K needs a strong GPU + LAN.">
             ${['720p','1080p','1440p','4k', detected.resolution].filter((v,i,a)=>a.indexOf(v)===i).map(r =>
               `<option value="${r}" ${s.resolution===r?'selected':''}>${r}${r===detected.resolution?' (auto-detected)':''}</option>`).join('')}
           </select>
         </div>
-        <div class="cd-field">
-          <label class="cd-field-label">FPS</label>
-          <select id="set-fps">
+        <div class="cd-field-hint">Resolution the game renders at on your PC for streaming. Doesn't affect what you see when sitting in front of the PC physically.</div>
+
+        <div class="cd-field" title="Target frame rate of the stream. Most games feel great at 60. 120/144 only matters for fast-paced shooters and needs proportionally more bandwidth.">
+          <label class="cd-field-label">FPS <span class="cd-help">?</span></label>
+          <select id="set-fps" title="Higher FPS = smoother motion but exponentially more bandwidth. Cap below your monitor's refresh rate.">
             ${[30,60,90,120,144].map(f =>
               `<option value="${f}" ${(s.fps||defaults.fps||60)==f?'selected':''}>${f}</option>`).join('')}
           </select>
         </div>
-        <div class="cd-field">
-          <label class="cd-field-label">Bitrate (kbps)</label>
-          <input id="set-bitrate" type="number" min="1000" max="100000" step="1000" value="${s.bitrate||defaults.bitrate||20000}" />
+        <div class="cd-field-hint">Frame rate the stream targets. 60 FPS is the universal sweet spot for game streaming.</div>
+
+        <div class="cd-field" title="Video bitrate in kilobits per second. Higher = better image quality but eats your upload bandwidth. ~20 Mbps for 1080p60 is normal; bump to 50+ for 4K.">
+          <label class="cd-field-label">Bitrate (kbps) <span class="cd-help">?</span></label>
+          <input id="set-bitrate" type="number" min="1000" max="100000" step="1000" value="${s.bitrate||defaults.bitrate||20000}" title="20000 = 20 Mbps (good for 1080p60). 50000 = 50 Mbps (good for 4K60). Test on your network — too high makes Moonlight stutter." />
         </div>
-        <div class="cd-field-hint">Auto-detected from this device: ${detected.resolution} @ ${detected.fps} Hz</div>
+        <div class="cd-field-hint">Video bandwidth ceiling. ~20000 (20 Mbps) is good for 1080p60. Auto-detected from this device: ${detected.resolution} @ ${detected.fps} Hz</div>
       </div>
 
       <div class="cd-settings-section">
         <h3>Audio</h3>
-        <div class="cd-field">
-          <label class="cd-field-label">Bitrate (kbps)</label>
-          <select id="set-abitrate">
+        <div class="cd-field" title="Audio bitrate in kbps. 256 is studio-quality stereo, 128 is fine for chat/podcast-y games, 320 is overkill for most cases.">
+          <label class="cd-field-label">Bitrate (kbps) <span class="cd-help">?</span></label>
+          <select id="set-abitrate" title="Audio bandwidth — 256 kbps is transparent for stereo gameplay.">
             ${[128,256,320].map(b => `<option value="${b}" ${(s.audioBitrate||defaults.audioBitrate||256)==b?'selected':''}>${b}</option>`).join('')}
           </select>
         </div>
-        <div class="cd-field">
-          <label class="cd-field-label">Surround passthrough</label>
+        <div class="cd-field-hint">Audio quality of the stream. 256 kbps is more than enough for stereo games.</div>
+
+        <div class="cd-field" title="Pass 5.1 / 7.1 surround channels through to the client device. Only useful if your viewing device has surround output (e.g. a soundbar or AV receiver via HDMI). Most phones and laptops just downmix to stereo so leave this off.">
+          <label class="cd-field-label">Surround passthrough <span class="cd-help">?</span></label>
           <input id="set-surround" type="checkbox" ${s.audioSurround ? 'checked' : ''} />
         </div>
+        <div class="cd-field-hint">Send raw 5.1/7.1 channels instead of downmixed stereo. Only flip this on if you're streaming to a device with surround speakers.</div>
       </div>
 
       ${this.me?.role === 'admin' ? `
       <div class="cd-settings-section">
         <h3>Sleep Schedule</h3>
-        <div class="cd-field">
-          <label class="cd-field-label">Enabled</label>
+        <div class="cd-field" title="When on, the PC agent will automatically put the PC to sleep at the configured time on the selected days. If you're actively streaming when it fires, you get a prompt instead of immediate sleep.">
+          <label class="cd-field-label">Enabled <span class="cd-help">?</span></label>
           <input id="sleep-enabled" type="checkbox" ${sleepSchedule?.schedule?.enabled?'checked':''} />
         </div>
-        <div class="cd-field">
-          <label class="cd-field-label">Sleep at</label>
+        <div class="cd-field" title="Daily time at which the sleep trigger fires (PC's local time).">
+          <label class="cd-field-label">Sleep at <span class="cd-help">?</span></label>
           <input id="sleep-time" type="time" value="${sleepSchedule?.schedule?.time || '00:00'}" />
         </div>
-        <div class="cd-field">
-          <label class="cd-field-label">Days</label>
+        <div class="cd-field" title="Days of the week the sleep schedule is active. Click each letter to toggle.">
+          <label class="cd-field-label">Days <span class="cd-help">?</span></label>
           <div id="sleep-days" style="display:flex; gap:6px;">
             ${['S','M','T','W','T','F','S'].map((d, i) =>
-              `<button data-day="${i}" class="day-btn ${sleepSchedule?.schedule?.days?.includes(i)?'on':''}">${d}</button>`).join('')}
+              `<button data-day="${i}" class="day-btn ${sleepSchedule?.schedule?.days?.includes(i)?'on':''}" title="Toggle ${['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'][i]}">${d}</button>`).join('')}
           </div>
         </div>
+        <div class="cd-field-hint">Sets a recurring time for the PC to put itself to sleep. Skipped if you're actively gaming — you'll get a "Sleep now?" prompt.</div>
         <style>
           .day-btn.on { background: rgba(230,57,70,0.2); border-color: var(--cd-red); }
         </style>

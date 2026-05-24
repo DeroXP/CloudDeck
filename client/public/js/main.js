@@ -10,6 +10,7 @@ import { DashboardModule } from './dashboard.js';
 import { ScreenshotsModule } from './screenshots.js';
 import { SettingsModule } from './settings.js';
 import { StreamModule } from './stream.js';
+import { GameDetailModule } from './game-detail.js';
 import { AFKMonitor } from './afk.js';
 import { NetworkIndicator } from './network.js';
 import { ReconnectOverlay } from './reconnect.js';
@@ -55,7 +56,19 @@ realtime.connect(accessToken);
 const xmb = new XMB();
 const library = new LibraryModule({
   realtime,
-  onLaunch: g => launchGame(g),
+  onLaunch: g => launchGame(g),          // last-played shortcut tiles
+  onSelect: g => gameDetail.open(g),     // main grid cards
+});
+const gameDetail = new GameDetailModule({ realtime });
+gameDetail.addEventListener('play', e => {
+  gameDetail.close();
+  launchGame(e.detail.game);
+});
+gameDetail.addEventListener('stop', async () => {
+  try {
+    await realtime.sendCommand('close-game', {});
+    toast('Stopping game…', 'ok');
+  } catch (err) { toast(err.message, 'warn'); }
 });
 const dashboard = new DashboardModule({ realtime });
 const screenshots = new ScreenshotsModule({ realtime });

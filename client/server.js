@@ -258,6 +258,46 @@ app.get('/api/sessions', auth.requireAuth, (req, res) => {
   res.json({ sessions: store.getRecentSessions(req.user.sub, 50) });
 });
 
+// Steam Storefront API proxy. The public API is not CORS-open so the browser
+// can't hit it directly; we forward the request and return whatever Steam
+// gives us. Cheap to cache — game metadata barely changes.
+const steamMetaCache = new Map(); // appid -> { data, at }
+const STEAM_META_TTL = 6 * 60 * 60 * 1000;   // 6h
+app.get('/api/steam-meta/:appid', auth.requireAuth, async (req, res) => {
+  const appid = req.params.appid.replace(/[^0-9]/g, '');
+  if (!appid) return res.status(400).json({ error: 'Invalid appid' });
+  const cached = steamMetaCache.get(appid);
+  if (cached && Date.now() - cached.at < STEAM_META_TTL) {
+    return res.json(cached.data);
+  }
+  try {
+    const r = await fetch(
+      `https://store.steampowered.com/api/appdetails?appids=${appid}&filters=basic,screenshots,categories,genres`,
+      { signal: AbortSignal.timeout(8000) },
+    );
+    if (!r.ok) return res.status(r.status).json({ error: `Steam ${r.status}` });
+    const data = await r.json();
+    steamMetaCache.set(appid, { data, at: Date.now() });
+    res.json(data);
+  } catch (err) {
+    res.status(502).json({ error: err.message });
+  }
+});
+
+// Aggregate play stats for a single game — used by the game detail modal
+// to show "X hours played, last opened Y ago".
+app.get('/api/game-stats/:gameId', auth.requireAuth, (req, res) => {
+  const sessions = store.getSessions(req.user.sub).filter(s => s.gameId === req.params.gameId);
+  const totalSeconds = sessions.reduce((sum, s) => sum + (s.durationSeconds || 0), 0);
+  const lastPlayed = sessions.length ? Math.max(...sessions.map(s => s.endedAt || 0)) : null;
+  res.json({
+    gameId: req.params.gameId,
+    totalSeconds,
+    playCount: sessions.length,
+    lastPlayed,
+  });
+});
+
 app.get('/api/last-played', auth.requireAuth, (req, res) => {
   res.json({ games: store.getLastPlayed(req.user.sub, 3) });
 });

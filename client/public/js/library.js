@@ -4,9 +4,10 @@ import { api } from './api.js';
 import { focus } from './focus.js';
 
 export class LibraryModule {
-  constructor({ realtime, onLaunch }) {
+  constructor({ realtime, onLaunch, onSelect }) {
     this.realtime = realtime;
-    this.onLaunch = onLaunch;
+    this.onLaunch = onLaunch;     // direct launch (used by shortcut tiles)
+    this.onSelect = onSelect;     // open detail modal (used by grid cards)
     this.games = [];
     this.lastPlayed = [];
     // Live updates from agent
@@ -77,7 +78,10 @@ export class LibraryModule {
           <strong>${escapeHtml(game.name)}</strong>
         </div>
       `;
-      card.addEventListener('click', () => this.onLaunch(game));
+      // Grid cards open the detail modal; from there the user hits Play.
+      // This is the user-requested behavior: "I don't want the game to just
+      // open and play — show details, gallery, achievements, play/stop."
+      card.addEventListener('click', () => (this.onSelect || this.onLaunch)(game));
       focus.register('items-games', card);
       grid.appendChild(card);
     }

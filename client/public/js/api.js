@@ -27,6 +27,9 @@ export const api = {
   async sessions() {
     return fetch('/api/sessions', { credentials: 'include' }).then(json);
   },
+  async gameStats(gameId) {
+    return fetch(`/api/game-stats/${encodeURIComponent(gameId)}`, { credentials: 'include' }).then(json);
+  },
   async recordSession(body) {
     return fetch('/api/sessions', {
       method: 'POST',

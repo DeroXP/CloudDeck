@@ -24,27 +24,27 @@
       <defs>
         <linearGradient id="cdw1" x1="0%" y1="0%" x2="100%" y2="0%">
           <stop offset="0%"   stop-color="#ff6680" stop-opacity="0"/>
-          <stop offset="50%"  stop-color="#ff6680" stop-opacity="0.55"/>
+          <stop offset="50%"  stop-color="#ff6680" stop-opacity="0.85"/>
           <stop offset="100%" stop-color="#ff6680" stop-opacity="0"/>
         </linearGradient>
         <linearGradient id="cdw2" x1="0%" y1="0%" x2="100%" y2="0%">
           <stop offset="0%"   stop-color="#ffb0c0" stop-opacity="0"/>
-          <stop offset="50%"  stop-color="#ffb0c0" stop-opacity="0.4"/>
+          <stop offset="50%"  stop-color="#ffb0c0" stop-opacity="0.7"/>
           <stop offset="100%" stop-color="#ffb0c0" stop-opacity="0"/>
         </linearGradient>
         <linearGradient id="cdw3" x1="0%" y1="0%" x2="100%" y2="0%">
           <stop offset="0%"   stop-color="#e63946" stop-opacity="0"/>
-          <stop offset="50%"  stop-color="#e63946" stop-opacity="0.35"/>
+          <stop offset="50%"  stop-color="#e63946" stop-opacity="0.65"/>
           <stop offset="100%" stop-color="#e63946" stop-opacity="0"/>
         </linearGradient>
         <linearGradient id="cdw4" x1="0%" y1="0%" x2="100%" y2="0%">
           <stop offset="0%"   stop-color="#ff9080" stop-opacity="0"/>
-          <stop offset="50%"  stop-color="#ff9080" stop-opacity="0.3"/>
+          <stop offset="50%"  stop-color="#ff9080" stop-opacity="0.55"/>
           <stop offset="100%" stop-color="#ff9080" stop-opacity="0"/>
         </linearGradient>
         <linearGradient id="cdw5" x1="0%" y1="0%" x2="100%" y2="0%">
           <stop offset="0%"   stop-color="#c01838" stop-opacity="0"/>
-          <stop offset="50%"  stop-color="#c01838" stop-opacity="0.45"/>
+          <stop offset="50%"  stop-color="#c01838" stop-opacity="0.7"/>
           <stop offset="100%" stop-color="#c01838" stop-opacity="0"/>
         </linearGradient>
       </defs>
@@ -172,6 +172,12 @@
     </div>
   </div>
 
+  <!-- Game detail overlay -->
+  <div class="cd-detail" id="game-detail">
+    <button class="cd-detail-close" id="game-detail-close" title="Back (Esc)">←  Back</button>
+    <div class="cd-detail-scroll" id="game-detail-body"></div>
+  </div>
+
   <!-- AFK overlay -->
   <div class="cd-afk" id="afk">
     <div class="cd-afk-title">No Activity Detected</div>
@@ -220,6 +226,9 @@
     <span class="cd-hint cd-hint-controller">A Confirm · B Back · LB/RB Switch Category</span>
   </div>
 
+  <!-- Allow loading Steam Storefront API + CDN images directly from the
+       browser for the game-detail modal — store.steampowered.com is CORS-open
+       so the fetch works without proxying through our server. -->
   <script src="https://cdn.jsdelivr.net/npm/nipplejs@0.10.2/dist/nipplejs.min.js"></script>
   <script type="module" src="/js/main.js"></script>
 </body>

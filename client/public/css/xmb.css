@@ -97,16 +97,16 @@ input:focus, select:focus {
   height: 100vh;
   transform: translate(-50%, -50%);
   background: radial-gradient(circle at center,
-    rgba(255, 80, 110, 0.28) 0%,
-    rgba(230, 57, 70, 0.14) 25%,
+    rgba(255, 80, 110, 0.55) 0%,
+    rgba(230, 57, 70, 0.3) 25%,
     transparent 55%);
   filter: blur(40px);
-  animation: cd-halo-pulse 9s ease-in-out infinite;
+  animation: cd-halo-pulse 6s ease-in-out infinite;
   will-change: transform, opacity;
 }
 @keyframes cd-halo-pulse {
   0%, 100% { transform: translate(-50%, -50%) scale(1);    opacity: 0.85; }
-  50%      { transform: translate(-50%, -55%) scale(1.08); opacity: 1; }
+  50%      { transform: translate(-50%, -55%) scale(1.18); opacity: 1; }
 }
 
 /* --- The five wave ribbons --- */
@@ -123,31 +123,31 @@ input:focus, select:focus {
   will-change: transform;
   mix-blend-mode: screen;   /* lets ribbons brighten where they overlap */
 }
-.cd-wave-a { animation: cd-wave-flow-a 18s ease-in-out infinite; }
-.cd-wave-b { animation: cd-wave-flow-b 24s ease-in-out infinite; }
-.cd-wave-c { animation: cd-wave-flow-c 30s ease-in-out infinite; }
-.cd-wave-d { animation: cd-wave-flow-d 36s ease-in-out infinite; }
-.cd-wave-e { animation: cd-wave-flow-e 42s ease-in-out infinite; }
+.cd-wave-a { animation: cd-wave-flow-a 10s ease-in-out infinite; }
+.cd-wave-b { animation: cd-wave-flow-b 13s ease-in-out infinite; }
+.cd-wave-c { animation: cd-wave-flow-c 16s ease-in-out infinite; }
+.cd-wave-d { animation: cd-wave-flow-d 19s ease-in-out infinite; }
+.cd-wave-e { animation: cd-wave-flow-e 22s ease-in-out infinite; }
 
 @keyframes cd-wave-flow-a {
-  0%, 100% { transform: translate3d(0, 0, 0)        scaleY(1); }
-  50%      { transform: translate3d(-90px, 35px, 0) scaleY(1.45); }
+  0%, 100% { transform: translate3d(0, 0, 0)          scaleY(1)    scaleX(1); }
+  50%      { transform: translate3d(-180px, 80px, 0)  scaleY(2.2)  scaleX(1.1); }
 }
 @keyframes cd-wave-flow-b {
-  0%, 100% { transform: translate3d(0, 0, 0)        scaleY(1)   scaleX(1); }
-  50%      { transform: translate3d(70px, -40px, 0) scaleY(1.3) scaleX(0.95); }
+  0%, 100% { transform: translate3d(0, 0, 0)          scaleY(1)    scaleX(1); }
+  50%      { transform: translate3d(160px, -90px, 0)  scaleY(2.0)  scaleX(0.85); }
 }
 @keyframes cd-wave-flow-c {
-  0%, 100% { transform: translate3d(0, 0, 0)         scaleY(1); }
-  50%      { transform: translate3d(-50px, -25px, 0) scaleY(0.7); }
+  0%, 100% { transform: translate3d(0, 0, 0)          scaleY(1); }
+  50%      { transform: translate3d(-120px, -60px, 0) scaleY(0.5); }
 }
 @keyframes cd-wave-flow-d {
-  0%, 100% { transform: translate3d(0, 0, 0)        scaleY(1); }
-  50%      { transform: translate3d(40px, 50px, 0)  scaleY(1.6); }
+  0%, 100% { transform: translate3d(0, 0, 0)          scaleY(1); }
+  50%      { transform: translate3d(100px, 110px, 0)  scaleY(2.6); }
 }
 @keyframes cd-wave-flow-e {
-  0%, 100% { transform: translate3d(0, 0, 0)         scaleY(1)    scaleX(1); }
-  50%      { transform: translate3d(-60px, -10px, 0) scaleY(0.85) scaleX(1.05); }
+  0%, 100% { transform: translate3d(0, 0, 0)          scaleY(1)    scaleX(1); }
+  50%      { transform: translate3d(-140px, -30px, 0) scaleY(0.6)  scaleX(1.2); }
 }
 
 /* --- Floating face-button glyphs --- */
@@ -159,27 +159,27 @@ input:focus, select:focus {
 .cd-ps-shape {
   position: absolute;
   font-family: 'Segoe UI Symbol', 'Apple Color Emoji', 'Noto Sans Symbols', system-ui, sans-serif;
-  font-size: 26px;
+  font-size: 38px;
   font-weight: 300;
-  color: rgba(255, 200, 210, 0.22);
+  color: rgba(255, 200, 215, 0.5);
   text-shadow:
-    0 0 8px rgba(255, 100, 130, 0.45),
-    0 0 20px rgba(230, 57, 70, 0.25);
-  animation: cd-shape-drift 22s ease-in-out infinite;
+    0 0 14px rgba(255, 120, 150, 0.8),
+    0 0 30px rgba(230, 57, 70, 0.5);
+  animation: cd-shape-drift 12s ease-in-out infinite;
   user-select: none;
   will-change: transform, opacity;
 }
 /* Stagger animation duration based on nth-of-type so neighbouring glyphs
    don't drift together — gives the layer organic motion. */
-.cd-ps-shape:nth-of-type(2n)   { animation-duration: 26s; font-size: 32px; }
-.cd-ps-shape:nth-of-type(3n)   { animation-duration: 30s; font-size: 22px; }
-.cd-ps-shape:nth-of-type(4n+1) { animation-duration: 34s; }
+.cd-ps-shape:nth-of-type(2n)   { animation-duration: 15s; font-size: 46px; }
+.cd-ps-shape:nth-of-type(3n)   { animation-duration: 17s; font-size: 32px; }
+.cd-ps-shape:nth-of-type(4n+1) { animation-duration: 19s; }
 
 @keyframes cd-shape-drift {
-  0%, 100% { transform: translate(0, 0) rotate(0deg);     opacity: 0.35; }
-  25%      { transform: translate(18px, -22px) rotate(2deg);   opacity: 0.7; }
-  50%      { transform: translate(-12px, -38px) rotate(-3deg); opacity: 0.55; }
-  75%      { transform: translate(22px, 12px) rotate(1deg);    opacity: 0.6; }
+  0%, 100% { transform: translate(0, 0) rotate(0deg);          opacity: 0.55; }
+  25%      { transform: translate(45px, -55px) rotate(8deg);   opacity: 1; }
+  50%      { transform: translate(-35px, -90px) rotate(-12deg); opacity: 0.85; }
+  75%      { transform: translate(55px, 30px) rotate(5deg);    opacity: 0.9; }
 }
 
 /* --- Vignette: subtle darkening at the edges --- */
@@ -325,26 +325,34 @@ input:focus, select:focus {
 
 /* ============================================================
    XMB — categories + items
-   ============================================================ */
+   ============================================================
+   Layout is anchored from the top with explicit row heights so the category
+   bar (Games/Dashboard/Screenshots/Settings) never moves vertically as the
+   items panel content changes. Previously justify-content:center would shift
+   the whole column up/down depending on the active panel's content height.
+   --------------------------------------------------------- */
 .cd-xmb {
   position: fixed;
   inset: 0;
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
+  display: grid;
+  /* shortcuts | gap | cats | gap | items (fills remaining height) */
+  grid-template-rows: 240px 24px 100px 24px 1fr;
   z-index: 5;
-  padding: 0 0 0 80px;
+  padding: 70px 60px 80px 80px;
   opacity: 1;
   transition: opacity 0.25s var(--cd-ease);
+  box-sizing: border-box;
 }
 .cd-xmb.cd-xmb-hidden { opacity: 0; pointer-events: none; }
 
 /* Last-played shortcut row — appears above the XMB categories */
 .cd-shortcuts {
+  grid-row: 1;
   display: flex;
   gap: 18px;
-  margin: 0 0 50px 0;
   align-items: flex-end;
+  margin: 0;
+  min-height: 0;
 }
 .cd-shortcut {
   width: 180px;
@@ -378,12 +386,14 @@ input:focus, select:focus {
   transform: translateY(-6px) scale(1.03);
 }
 
-/* Categories row */
+/* Categories row — locked to grid-row 3 so it never moves vertically */
 .cd-cats {
+  grid-row: 3;
   display: flex;
   gap: 80px;
   align-items: center;
   transition: transform 0.45s var(--cd-ease);
+  height: 100%;
 }
 .cd-cat {
   display: flex;
@@ -425,29 +435,40 @@ input:focus, select:focus {
   color: var(--cd-fg);
 }
 
-/* Items panel (below categories) */
+/* Items panel — fills the remaining viewport row of the grid. Internal
+   panels handle their own scrolling (cd-games, cd-shots, cd-settings all
+   set overflow-y:auto inside this container). */
 .cd-items {
-  margin-top: 40px;
-  min-height: 320px;
+  grid-row: 5;
   display: flex;
+  margin: 0;
+  min-height: 0;
+  overflow: hidden;
 }
 .cd-items-content {
   width: 100%;
+  height: 100%;
   opacity: 1;
   transition: opacity 0.25s var(--cd-ease);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
 }
 .cd-items-content.cd-items-fade {
   opacity: 0;
 }
 
-/* Games grid */
+/* Games grid — fills the items pane and scrolls internally */
 .cd-games {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
   gap: 18px;
-  max-height: 540px;
+  flex: 1 1 auto;
+  min-height: 0;
+  max-height: 100%;
   overflow-y: auto;
   padding: 4px;
+  align-content: start;
 }
 .cd-game {
   position: relative;
@@ -526,6 +547,11 @@ input:focus, select:focus {
   grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
   gap: 18px;
   max-width: 980px;
+  flex: 1 1 auto;
+  min-height: 0;
+  max-height: 100%;
+  overflow-y: auto;
+  align-content: start;
 }
 .cd-dash-card {
   padding: 18px;
@@ -564,14 +590,17 @@ input:focus, select:focus {
   transition: width 0.3s var(--cd-ease);
 }
 
-/* Screenshots */
+/* Screenshots — fills items pane and scrolls internally */
 .cd-shots {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
   gap: 14px;
-  max-height: 540px;
+  flex: 1 1 auto;
+  min-height: 0;
+  max-height: 100%;
   overflow-y: auto;
   padding: 4px;
+  align-content: start;
 }
 .cd-shot {
   aspect-ratio: 16/9;
@@ -590,10 +619,12 @@ input:focus, select:focus {
   transform: scale(1.02);
 }
 
-/* Settings */
+/* Settings — fills items pane, scrolls internally, capped width for readability */
 .cd-settings {
   max-width: 700px;
-  max-height: 540px;
+  flex: 1 1 auto;
+  min-height: 0;
+  max-height: 100%;
   overflow-y: auto;
   padding-right: 8px;
 }
@@ -623,8 +654,26 @@ input:focus, select:focus {
 .cd-field-hint {
   font-size: 11px;
   color: var(--cd-fg-dim);
-  grid-column: 2;
-  margin-top: -4px;
+  grid-column: 1 / -1;
+  margin: -8px 0 14px 0;
+  padding-left: 4px;
+  line-height: 1.5;
+  opacity: 0.75;
+}
+/* Small ? badge next to a setting label — hover shows the title= tooltip */
+.cd-help {
+  display: inline-grid;
+  place-items: center;
+  width: 14px;
+  height: 14px;
+  margin-left: 4px;
+  border-radius: 50%;
+  background: rgba(230, 57, 70, 0.18);
+  color: var(--cd-red);
+  font-size: 9px;
+  font-weight: 700;
+  cursor: help;
+  vertical-align: 1px;
 }
 
 /* ============================================================
@@ -720,6 +769,198 @@ input:focus, select:focus {
   inset: 0;
   padding: 60px;
   overflow: auto;
+}
+
+/* ============================================================
+   Game detail modal
+   ============================================================ */
+.cd-detail {
+  position: fixed;
+  inset: 0;
+  z-index: 80;
+  background: linear-gradient(135deg, rgba(15, 5, 12, 0.96), rgba(40, 8, 20, 0.96));
+  backdrop-filter: blur(20px);
+  display: none;
+  opacity: 0;
+  transition: opacity 0.3s var(--cd-ease);
+}
+.cd-detail.cd-detail-active {
+  display: block;
+  opacity: 1;
+}
+.cd-detail-close {
+  position: fixed;
+  top: 20px;
+  left: 24px;
+  z-index: 2;
+  padding: 8px 16px;
+  font-size: 12px;
+  letter-spacing: 2px;
+  background: rgba(0, 0, 0, 0.45);
+  color: var(--cd-fg);
+}
+.cd-detail-scroll {
+  position: absolute;
+  inset: 0;
+  overflow-y: auto;
+  overflow-x: hidden;
+}
+.cd-detail-hero {
+  position: relative;
+  height: 50vh;
+  min-height: 320px;
+  background-size: cover;
+  background-position: center;
+  background-color: #1a0008;
+  display: flex;
+  align-items: flex-end;
+  padding: 0 60px 40px 60px;
+}
+.cd-detail-hero-shade {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(180deg,
+    rgba(15, 5, 12, 0.25) 0%,
+    rgba(15, 5, 12, 0.6) 60%,
+    rgba(15, 5, 12, 0.98) 100%);
+}
+.cd-detail-hero-content {
+  position: relative;
+  z-index: 1;
+}
+.cd-detail-platform {
+  font-size: 10px;
+  letter-spacing: 4px;
+  font-weight: 700;
+  color: var(--cd-red);
+  text-shadow: 0 0 12px var(--cd-red-glow);
+  margin-bottom: 8px;
+}
+.cd-detail-title {
+  margin: 0;
+  font-size: 42px;
+  font-weight: 700;
+  letter-spacing: 1px;
+  color: var(--cd-fg);
+  text-shadow: 0 4px 24px rgba(0, 0, 0, 0.8);
+}
+.cd-detail-body {
+  padding: 30px 60px 80px 60px;
+  max-width: 1100px;
+  margin: 0 auto;
+}
+.cd-detail-actions {
+  display: flex;
+  gap: 14px;
+  margin-bottom: 32px;
+}
+.cd-detail-play, .cd-detail-stop {
+  padding: 16px 38px;
+  font-size: 14px;
+  letter-spacing: 3px;
+  font-weight: 700;
+  border-radius: 999px;
+}
+.cd-detail-play {
+  background: var(--cd-red);
+  border-color: var(--cd-red);
+  color: white;
+  box-shadow: 0 0 24px var(--cd-red-glow);
+}
+.cd-detail-play:hover, .cd-detail-play.cd-focused {
+  background: #ff4868;
+  transform: translateY(-2px);
+  box-shadow: 0 0 40px var(--cd-red-glow);
+}
+.cd-detail-stop {
+  background: rgba(255, 255, 255, 0.05);
+  border-color: var(--cd-fg-dim);
+  color: var(--cd-fg);
+}
+.cd-detail-stop:hover, .cd-detail-stop.cd-focused {
+  border-color: var(--cd-red);
+  color: var(--cd-red);
+}
+.cd-detail-stats {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 16px;
+  margin-bottom: 36px;
+  max-width: 600px;
+}
+.cd-detail-stat {
+  padding: 18px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid var(--cd-border);
+  border-radius: var(--cd-radius);
+}
+.cd-detail-stat-label {
+  font-size: 10px;
+  letter-spacing: 3px;
+  color: var(--cd-fg-dim);
+  text-transform: uppercase;
+}
+.cd-detail-stat-value {
+  margin-top: 8px;
+  font-size: 22px;
+  font-weight: 700;
+}
+.cd-detail-section {
+  margin-bottom: 36px;
+}
+.cd-detail-section h3 {
+  font-size: 11px;
+  letter-spacing: 4px;
+  color: var(--cd-red);
+  text-transform: uppercase;
+  margin: 0 0 14px 0;
+}
+.cd-detail-desc {
+  font-size: 15px;
+  line-height: 1.7;
+  color: var(--cd-fg);
+  opacity: 0.92;
+  margin: 0;
+}
+.cd-detail-gallery {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+  gap: 10px;
+}
+.cd-detail-shot {
+  aspect-ratio: 16/9;
+  border-radius: 8px;
+  background-size: cover;
+  background-position: center;
+  cursor: zoom-in;
+  border: 1px solid var(--cd-border);
+  transition: transform 0.2s var(--cd-ease), border-color 0.2s var(--cd-ease);
+}
+.cd-detail-shot:hover {
+  transform: scale(1.02);
+  border-color: var(--cd-red);
+}
+.cd-detail-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.cd-detail-tag {
+  padding: 5px 12px;
+  border-radius: 999px;
+  background: rgba(230, 57, 70, 0.12);
+  border: 1px solid rgba(230, 57, 70, 0.3);
+  color: var(--cd-fg);
+  font-size: 12px;
+  letter-spacing: 1px;
+}
+
+@media (max-width: 768px) {
+  .cd-detail-hero { padding: 0 24px 24px 24px; height: 38vh; min-height: 240px; }
+  .cd-detail-title { font-size: 28px; }
+  .cd-detail-body { padding: 20px 24px 60px 24px; }
+  .cd-detail-stats { grid-template-columns: 1fr; }
+  .cd-detail-close { top: 12px; left: 12px; }
 }
 
 /* ============================================================
