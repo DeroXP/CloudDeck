@@ -22,8 +22,13 @@ COPY --from=deps /app/client/node_modules ./client/node_modules
 COPY client ./client
 COPY .env.example ./
 
-# Persistent volume for users.json, sessions.json, etc.
-VOLUME /data
+# Persistent storage for users.json, sessions.json, etc.
+#
+# NOTE: we deliberately do NOT declare `VOLUME /data` here — Railway rejects
+# Dockerfiles that use the VOLUME directive ("use Railway Volumes" error at
+# build time). Instead create the directory and rely on the Railway-managed
+# volume being mounted at /data at runtime. For docker-compose / local
+# runs the named volume in docker-compose.yml covers the same purpose.
 RUN mkdir -p /data && chown -R app:app /data /app
 
 USER app
