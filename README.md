@@ -70,7 +70,7 @@ npm install --global windows-build-tools
 
 ```bash
 ssh pi@raspberrypi.local
-git clone <your-fork-url> CloudDeck
+git clone https://github.com/DeroXP/CloudDeck.git
 cd CloudDeck/pi
 cp ../.env.example .env
 # Edit .env — set PI_SECRET_TOKEN (matching Railway), PC_MAC_ADDRESS
