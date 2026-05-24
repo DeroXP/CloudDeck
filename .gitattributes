@@ -1,0 +1,21 @@
+# Force LF for code so Windows + Linux contributors don't fight over line endings.
+* text=auto eol=lf
+
+# Binary assets — let git handle as-is
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.webp binary
+*.ico binary
+*.woff binary
+*.woff2 binary
+
+# Shell + service files must be LF (systemd parses them)
+*.sh text eol=lf
+*.service text eol=lf
+*.py text eol=lf
+
+# Windows-specific scripts must be CRLF
+*.ps1 text eol=crlf
+*.bat text eol=crlf
+*.cmd text eol=crlf

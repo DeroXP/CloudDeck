@@ -1,0 +1,65 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  client:
+    name: Railway app — install + syntax check
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: client/package.json
+      - run: cd client && npm install --no-audit --no-fund
+      - name: Syntax check
+        run: |
+          cd client
+          for f in $(find . -name '*.js' -not -path '*/node_modules/*' -not -path '*/data/*'); do
+            node --check "$f"
+          done
+
+  agent:
+    name: Agent — install + syntax check (Linux subset)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - name: Install (skip optional native deps)
+        run: cd agent && npm install --no-optional --no-audit --no-fund || true
+      - name: Syntax check
+        run: |
+          cd agent
+          for f in $(find . -name '*.js' -not -path '*/node_modules/*'); do
+            node --check "$f"
+          done
+
+  pi:
+    name: Pi — Python lint
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - run: pip install -r pi/requirements.txt pyflakes
+      - run: pyflakes pi/wol_server.py
+
+  docker:
+    name: Docker build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: docker/setup-buildx-action@v3
+      - uses: docker/build-push-action@v5
+        with:
+          context: .
+          push: false
+          tags: clouddeck:ci

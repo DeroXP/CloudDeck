@@ -1,0 +1,161 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>CloudDeck</title>
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no" />
+  <meta name="theme-color" content="#0a0e1a" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;500;600;700&display=swap" />
+  <link rel="stylesheet" href="/css/xmb.css" />
+</head>
+<body class="cd-input-mouse">
+
+  <div class="cd-bg"></div>
+
+  <!-- Boot screen -->
+  <div class="cd-boot" id="boot">
+    <div class="cd-boot-logo">CLOUDDECK</div>
+    <div class="cd-boot-sub">Connecting…</div>
+  </div>
+
+  <!-- Header chips -->
+  <div class="cd-header">
+    <div class="cd-brand">CLOUDDECK</div>
+    <div class="cd-header-right">
+      <div class="cd-chip" id="net-chip" title="Network quality">
+        <span class="cd-chip-dot grey" id="net-dot"></span>
+        <span id="net-text">—</span>
+      </div>
+      <div class="cd-chip" id="ping-chip" title="WebSocket round-trip latency">
+        <span id="ping-text">—</span>
+      </div>
+      <div class="cd-power offline" id="power-btn" role="button" tabindex="0" title="Wake PC">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M18.36 6.64a9 9 0 11-12.72 0" />
+          <line x1="12" y1="2" x2="12" y2="12" />
+        </svg>
+      </div>
+    </div>
+  </div>
+
+  <!-- XMB main -->
+  <main class="cd-xmb" id="xmb">
+
+    <!-- Last-played shortcuts -->
+    <div class="cd-shortcuts" id="shortcuts"></div>
+
+    <!-- Categories -->
+    <div class="cd-cats" id="cats">
+      <div class="cd-cat" data-cat="games">
+        <div class="cd-cat-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <rect x="2" y="6" width="20" height="12" rx="3"/><line x1="6" y1="12" x2="10" y2="12"/><line x1="8" y1="10" x2="8" y2="14"/><circle cx="16" cy="11" r="1"/><circle cx="18" cy="13" r="1"/>
+          </svg>
+        </div>
+        <div class="cd-cat-label">Games</div>
+      </div>
+      <div class="cd-cat" data-cat="dashboard">
+        <div class="cd-cat-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M3 12a9 9 0 1118 0"/><line x1="12" y1="12" x2="16" y2="8"/><circle cx="12" cy="12" r="1"/>
+          </svg>
+        </div>
+        <div class="cd-cat-label">Dashboard</div>
+      </div>
+      <div class="cd-cat" data-cat="screenshots">
+        <div class="cd-cat-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <rect x="3" y="5" width="18" height="14" rx="2"/><circle cx="12" cy="12" r="3"/>
+          </svg>
+        </div>
+        <div class="cd-cat-label">Screenshots</div>
+      </div>
+      <div class="cd-cat" data-cat="settings">
+        <div class="cd-cat-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 11-2.83 2.83l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 11-4 0v-.09A1.65 1.65 0 008.91 19a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 11-2.83-2.83l.06-.06A1.65 1.65 0 005 14.91a1.65 1.65 0 00-1.51-1H3a2 2 0 110-4h.09A1.65 1.65 0 005 8.91a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 112.83-2.83l.06.06A1.65 1.65 0 008.91 5a1.65 1.65 0 001-1.51V3a2 2 0 114 0v.09A1.65 1.65 0 0014.91 5a1.65 1.65 0 001.82-.33l.06-.06a2 2 0 112.83 2.83l-.06.06A1.65 1.65 0 0019 8.91c.32.78 1.07 1.31 1.91 1.31H21a2 2 0 110 4h-.09a1.65 1.65 0 00-1.51 1z"/>
+          </svg>
+        </div>
+        <div class="cd-cat-label">Settings</div>
+      </div>
+    </div>
+
+    <!-- Items panel (filled by JS depending on active category) -->
+    <div class="cd-items">
+      <div class="cd-items-content" id="items">
+        <div style="text-align:center; color: var(--cd-fg-dim); padding: 60px;">
+          PC offline. Press power to wake.
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <!-- Stream -->
+  <div class="cd-stream" id="stream">
+    <iframe id="stream-frame" allow="autoplay; fullscreen; gamepad; microphone *; clipboard-read; clipboard-write" allowfullscreen></iframe>
+    <div class="cd-stream-freeze cd-hidden" id="freeze"></div>
+  </div>
+  <button class="cd-overlay-btn cd-hidden" id="overlay-btn">⠿ Library</button>
+
+  <!-- Library overlay (rendered inside stream) -->
+  <div class="cd-overlay" id="overlay">
+    <div class="cd-overlay-inner">
+      <h2 style="margin-top:0; letter-spacing: 4px;">Library</h2>
+      <div class="cd-games" id="overlay-games"></div>
+    </div>
+  </div>
+
+  <!-- AFK overlay -->
+  <div class="cd-afk" id="afk">
+    <div class="cd-afk-title">No Activity Detected</div>
+    <div class="cd-afk-msg">Session will end and PC will sleep in</div>
+    <div class="cd-afk-timer" id="afk-timer">5:00</div>
+    <button class="cd-afk-btn" id="afk-dismiss">I'M HERE</button>
+  </div>
+
+  <!-- Reconnecting -->
+  <div class="cd-reconnect" id="reconnect">
+    <div class="cd-reconnect-inner">
+      <div class="cd-reconnect-spinner"></div>
+      <div style="letter-spacing: 3px; font-size: 12px;">RECONNECTING…</div>
+    </div>
+  </div>
+
+  <!-- Toasts -->
+  <div class="cd-toasts" id="toasts"></div>
+
+  <!-- Mobile gamepad -->
+  <div class="cd-mobile-pad" id="mobile-pad">
+    <div class="cd-pad-shoulders">
+      <div>
+        <div class="cd-pad-shoulder" data-btn="lb">LB</div>
+        <div class="cd-pad-shoulder" data-btn="lt">LT</div>
+      </div>
+      <div>
+        <div class="cd-pad-shoulder" data-btn="rt">RT</div>
+        <div class="cd-pad-shoulder" data-btn="rb">RB</div>
+      </div>
+    </div>
+    <div class="cd-pad-zone cd-pad-left" id="pad-left"></div>
+    <div class="cd-pad-zone cd-pad-right">
+      <div class="cd-pad-btn cd-pad-y" data-btn="y">Y</div>
+      <div class="cd-pad-btn cd-pad-x" data-btn="x">X</div>
+      <div class="cd-pad-btn cd-pad-b" data-btn="b">B</div>
+      <div class="cd-pad-btn cd-pad-a" data-btn="a">A</div>
+    </div>
+  </div>
+
+  <!-- Hints bar -->
+  <div class="cd-hints" id="hints">
+    <span class="cd-hint cd-hint-key"><span class="cd-hint-key">←/→</span> Navigate</span>
+    <span class="cd-hint cd-hint-key"><span class="cd-hint-key">Enter</span> Confirm</span>
+    <span class="cd-hint cd-hint-key"><span class="cd-hint-key">Esc</span> Back</span>
+    <span class="cd-hint cd-hint-controller">A Confirm · B Back · LB/RB Switch Category</span>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/nipplejs@0.10.2/dist/nipplejs.min.js"></script>
+  <script type="module" src="/js/main.js"></script>
+</body>
+</html>

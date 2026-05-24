@@ -1,0 +1,90 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>CloudDeck — Sign In</title>
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
+  <meta name="theme-color" content="#0a0e1a" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;500;600;700&display=swap" />
+  <link rel="stylesheet" href="/css/xmb.css" />
+</head>
+<body>
+  <div class="cd-bg"></div>
+
+  <div class="cd-card">
+    <h1>CloudDeck</h1>
+    <div class="cd-sub">Sign In</div>
+
+    <form id="login-form" autocomplete="on">
+      <label for="username">Username</label>
+      <input id="username" name="username" type="text" autocomplete="username" required />
+
+      <label for="password">Password</label>
+      <input id="password" name="password" type="password" autocomplete="current-password" required />
+
+      <div id="twofa-row" class="cd-hidden">
+        <label for="twofa">2FA Code</label>
+        <input id="twofa" name="twofa" type="text" inputmode="numeric" pattern="[0-9]{6}" maxlength="6" autocomplete="one-time-code" />
+      </div>
+
+      <div class="cd-error" id="error"></div>
+
+      <div class="actions">
+        <button type="submit" id="submit">Sign In</button>
+      </div>
+    </form>
+  </div>
+
+  <script type="module">
+    const form = document.getElementById('login-form');
+    const errEl = document.getElementById('error');
+    const twofaRow = document.getElementById('twofa-row');
+    const twofaInput = document.getElementById('twofa');
+    const submitBtn = document.getElementById('submit');
+
+    // If already onboarded? Check.
+    const cfg = await fetch('/api/public-config').then(r => r.json()).catch(() => ({}));
+    if (!cfg.hasAnyAdmin) {
+      location.href = '/onboarding';
+    }
+
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      errEl.textContent = '';
+      submitBtn.disabled = true;
+      const body = {
+        username: form.username.value,
+        password: form.password.value,
+      };
+      if (!twofaRow.classList.contains('cd-hidden')) {
+        body.twoFactorCode = twofaInput.value;
+      }
+      try {
+        const res = await fetch('/api/auth/login', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(body),
+        });
+        const data = await res.json();
+        if (data.twoFactorRequired) {
+          twofaRow.classList.remove('cd-hidden');
+          twofaInput.focus();
+          submitBtn.disabled = false;
+          return;
+        }
+        if (!res.ok) {
+          errEl.textContent = data.error || 'Login failed';
+          submitBtn.disabled = false;
+          return;
+        }
+        location.href = '/';
+      } catch (err) {
+        errEl.textContent = err.message;
+        submitBtn.disabled = false;
+      }
+    });
+  </script>
+</body>
+</html>

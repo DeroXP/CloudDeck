@@ -1,0 +1,26 @@
+{
+  "name": "clouddeck-client",
+  "version": "0.1.0",
+  "description": "CloudDeck Railway web app — XMB UI, auth, WebSocket signaling bridge",
+  "main": "server.js",
+  "type": "module",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node --watch server.js"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "dependencies": {
+    "bcrypt": "^5.1.1",
+    "cookie-parser": "^1.4.6",
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.5",
+    "express": "^4.19.2",
+    "express-rate-limit": "^7.3.1",
+    "jsonwebtoken": "^9.0.2",
+    "otplib": "^12.0.1",
+    "qrcode": "^1.5.3",
+    "ws": "^8.17.1"
+  }
+}

@@ -1,0 +1,27 @@
+{
+  "name": "clouddeck-agent",
+  "version": "0.1.0",
+  "description": "CloudDeck PC-side agent. Runs on the gaming PC as a Windows service.",
+  "main": "index.js",
+  "type": "module",
+  "scripts": {
+    "start": "node index.js",
+    "dev": "node --watch index.js",
+    "install-service": "node scripts/install-service.js",
+    "uninstall-service": "node scripts/uninstall-service.js"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "dependencies": {
+    "chokidar": "^3.6.0",
+    "dotenv": "^16.4.5",
+    "node-fetch": "^3.3.2",
+    "systeminformation": "^5.22.11",
+    "ws": "^8.17.1"
+  },
+  "optionalDependencies": {
+    "node-windows": "^1.0.0-beta.8",
+    "robotjs": "^0.6.0"
+  }
+}

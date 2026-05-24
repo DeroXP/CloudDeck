@@ -1,0 +1,26 @@
+[Unit]
+Description=CloudDeck Wake-on-LAN forwarder
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=pi
+Group=pi
+WorkingDirectory=/opt/clouddeck/pi
+EnvironmentFile=/opt/clouddeck/pi/.env
+ExecStart=/opt/clouddeck/pi/venv/bin/python /opt/clouddeck/pi/wol_server.py
+Restart=on-failure
+RestartSec=5
+StandardOutput=journal
+StandardError=journal
+
+# Mild hardening — this service does nothing but POST UDP packets
+NoNewPrivileges=true
+ProtectSystem=strict
+ProtectHome=true
+PrivateTmp=true
+ReadWritePaths=/opt/clouddeck/pi
+
+[Install]
+WantedBy=multi-user.target

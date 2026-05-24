@@ -1,0 +1,29 @@
+# Local development orchestration for the Railway-side app.
+#
+# Usage:
+#   cp .env.example client/.env  &&  edit client/.env
+#   docker compose up --build
+#   open http://localhost:3000
+#
+# The agent and Pi are deliberately not in this compose stack — see README for
+# how to install them on their own hardware.
+
+services:
+  clouddeck:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: clouddeck
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    env_file:
+      - client/.env
+    volumes:
+      - clouddeck-data:/data
+    environment:
+      - DATA_DIR=/data
+      - NODE_ENV=production
+
+volumes:
+  clouddeck-data:

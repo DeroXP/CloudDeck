@@ -1,0 +1,248 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>CloudDeck — First Run Setup</title>
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
+  <meta name="theme-color" content="#0a0e1a" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;500;600;700&display=swap" />
+  <link rel="stylesheet" href="/css/xmb.css" />
+  <style>
+    .cd-card { max-width: 540px; }
+    .cd-step { display: none; }
+    .cd-step.active { display: block; }
+    .cd-step h2 { font-size: 16px; letter-spacing: 3px; margin: 0 0 10px 0; }
+    .cd-step p { font-size: 13px; color: var(--cd-fg-dim); line-height: 1.6; margin: 8px 0; }
+    .cd-step code { background: rgba(255,255,255,0.06); padding: 2px 6px; border-radius: 4px; font-size: 12px; }
+    .cd-poll { display: flex; align-items: center; gap: 10px; font-size: 13px; padding: 12px; border: 1px dashed var(--cd-border); border-radius: 8px; margin: 16px 0; }
+    .cd-poll.success { border-color: var(--cd-green); color: var(--cd-green); }
+    .cd-poll.error { border-color: var(--cd-red); color: var(--cd-red); }
+  </style>
+</head>
+<body>
+  <div class="cd-bg"></div>
+
+  <div class="cd-card">
+    <h1>CloudDeck Setup</h1>
+    <div class="cd-sub" id="step-label">Step 1 of 6 — Admin Account</div>
+
+    <div class="cd-steps" id="steps">
+      <div class="cd-step-dot active"></div>
+      <div class="cd-step-dot"></div>
+      <div class="cd-step-dot"></div>
+      <div class="cd-step-dot"></div>
+      <div class="cd-step-dot"></div>
+      <div class="cd-step-dot"></div>
+    </div>
+
+    <!-- Step 1: Create admin -->
+    <div class="cd-step active" data-step="1">
+      <h2>Create admin account</h2>
+      <p>These are the credentials you'll use to sign in. Pick something memorable but strong — this account can launch games, control the PC, and create guest accounts.</p>
+      <label>Username</label>
+      <input id="username" type="text" required />
+      <label>Password</label>
+      <input id="password" type="password" required minlength="8" />
+      <label>Confirm password</label>
+      <input id="password2" type="password" required minlength="8" />
+      <div class="cd-error" id="err1"></div>
+      <div class="actions">
+        <button id="next1">Continue</button>
+      </div>
+    </div>
+
+    <!-- Step 2: PC agent -->
+    <div class="cd-step" data-step="2">
+      <h2>Install the PC agent</h2>
+      <p>The agent runs on your gaming PC and connects back to this Railway app over WebSocket. It accepts commands (launch games, fetch library, etc.) and pushes telemetry.</p>
+      <p>On your gaming PC, clone the repo, copy <code>.env.example</code> to <code>agent/.env</code>, set <code>RAILWAY_WS_URL</code> and <code>AGENT_TOKEN</code>, then run:</p>
+      <p><code>cd agent && npm install && npm run install-service</code></p>
+      <div class="cd-poll" id="poll-agent">
+        <span class="cd-spinner-inline"></span> Waiting for agent to connect…
+      </div>
+      <div class="actions">
+        <button id="back2">Back</button>
+        <button id="skip2">Skip for now</button>
+      </div>
+    </div>
+
+    <!-- Step 3: Sunshine -->
+    <div class="cd-step" data-step="3">
+      <h2>Install Sunshine</h2>
+      <p>Sunshine handles the actual video stream. Install it on the same PC as the agent:</p>
+      <p><a href="https://app.lizardbyte.dev/Sunshine/" target="_blank" rel="noopener">app.lizardbyte.dev/Sunshine</a></p>
+      <p>Default port is 47990 (config web) and 47989 (stream). The agent will detect it automatically.</p>
+      <div class="cd-poll" id="poll-sunshine">
+        <span class="cd-spinner-inline"></span> Checking Sunshine via the agent…
+      </div>
+      <div class="actions">
+        <button id="back3">Back</button>
+        <button id="next3">Continue</button>
+      </div>
+    </div>
+
+    <!-- Step 4: Pi -->
+    <div class="cd-step" data-step="4">
+      <h2>Raspberry Pi (optional)</h2>
+      <p>The Pi lets you wake the PC remotely. If you don't have one, skip this — you can always add it later. The PC must already be on for CloudDeck to be useful without it.</p>
+      <p>Set <code>PI_URL</code> and <code>PI_SECRET_TOKEN</code> in this app's <code>.env</code>, install the Pi script per the README, then test:</p>
+      <div class="cd-poll" id="poll-pi">
+        <span class="cd-spinner-inline"></span> Click "Test Pi" to verify reachability
+      </div>
+      <div class="actions">
+        <button id="back4">Back</button>
+        <button id="test-pi">Test Pi</button>
+        <button id="skip4">Skip</button>
+        <button id="next4" class="cd-hidden">Continue</button>
+      </div>
+    </div>
+
+    <!-- Step 5: BIOS WoL -->
+    <div class="cd-step" data-step="5">
+      <h2>BIOS Wake-on-LAN</h2>
+      <p>For wake-on-LAN to work, your gaming PC needs:</p>
+      <ul style="font-size: 13px; color: var(--cd-fg-dim); line-height: 1.8;">
+        <li>BIOS → Network adapter → Wake-on-LAN <strong>enabled</strong></li>
+        <li>Windows → Device Manager → NIC → Power Management → "Allow this device to wake the computer" <strong>checked</strong></li>
+        <li>"Only allow magic packet to wake the computer" <strong>checked</strong></li>
+      </ul>
+      <p>Try sleeping the PC, then click "Wake & test" — it should boot within ~30 seconds.</p>
+      <div class="actions">
+        <button id="back5">Back</button>
+        <button id="next5">Continue</button>
+      </div>
+    </div>
+
+    <!-- Step 6: Done -->
+    <div class="cd-step" data-step="6">
+      <h2>You're ready</h2>
+      <p>Setup is complete. The wizard won't appear again unless you reset configuration from Settings.</p>
+      <p>If something didn't work, you can always revisit the README for troubleshooting.</p>
+      <div class="actions">
+        <button id="finish">Enter CloudDeck →</button>
+      </div>
+    </div>
+  </div>
+
+  <script type="module">
+    const steps = [...document.querySelectorAll('.cd-step')];
+    const dots = [...document.querySelectorAll('.cd-step-dot')];
+    const stepLabel = document.getElementById('step-label');
+    const stepNames = [
+      'Admin Account', 'PC Agent', 'Sunshine', 'Raspberry Pi', 'BIOS WoL', 'All Done',
+    ];
+
+    let current = 1;
+
+    function show(n) {
+      current = n;
+      steps.forEach(s => s.classList.toggle('active', +s.dataset.step === n));
+      dots.forEach((d, i) => {
+        d.classList.remove('active', 'complete');
+        if (i + 1 < n) d.classList.add('complete');
+        if (i + 1 === n) d.classList.add('active');
+      });
+      stepLabel.textContent = `Step ${n} of 6 — ${stepNames[n - 1]}`;
+      // Start polling on the relevant step
+      if (n === 2) startAgentPoll();
+      if (n === 3) startSunshinePoll();
+    }
+
+    // ---- Step 1: create admin ----
+    document.getElementById('next1').addEventListener('click', async () => {
+      const u = document.getElementById('username').value.trim();
+      const p = document.getElementById('password').value;
+      const p2 = document.getElementById('password2').value;
+      const err = document.getElementById('err1');
+      err.textContent = '';
+      if (!u || u.length < 3) return err.textContent = 'Username must be at least 3 characters';
+      if (p.length < 8) return err.textContent = 'Password must be at least 8 characters';
+      if (p !== p2) return err.textContent = 'Passwords do not match';
+      const res = await fetch('/api/onboarding/create-admin', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ username: u, password: p }),
+      });
+      const data = await res.json();
+      if (!res.ok) return err.textContent = data.error || 'Failed';
+      show(2);
+    });
+
+    // ---- Step 2: wait for agent ----
+    let agentPoll = null;
+    function startAgentPoll() {
+      const el = document.getElementById('poll-agent');
+      if (agentPoll) clearInterval(agentPoll);
+      const check = async () => {
+        const h = await fetch('/api/health').then(r => r.json()).catch(() => ({}));
+        if (h.agentConnected) {
+          el.classList.add('success');
+          el.innerHTML = '✓ Agent connected';
+          clearInterval(agentPoll);
+          setTimeout(() => show(3), 800);
+        }
+      };
+      agentPoll = setInterval(check, 2000);
+      check();
+    }
+    document.getElementById('back2').addEventListener('click', () => show(1));
+    document.getElementById('skip2').addEventListener('click', () => { clearInterval(agentPoll); show(3); });
+
+    // ---- Step 3: sunshine ----
+    let sunshinePoll = null;
+    function startSunshinePoll() {
+      const el = document.getElementById('poll-sunshine');
+      if (sunshinePoll) clearInterval(sunshinePoll);
+      const check = async () => {
+        try {
+          const r = await fetch('/api/library', { credentials: 'include' });
+          const data = await r.json().catch(() => null);
+          if (r.ok) {
+            el.classList.add('success');
+            el.innerHTML = `✓ Agent responding (${data?.games?.length || 0} games found)`;
+            clearInterval(sunshinePoll);
+          }
+        } catch { /* try again */ }
+      };
+      sunshinePoll = setInterval(check, 3000);
+      check();
+    }
+    document.getElementById('back3').addEventListener('click', () => { clearInterval(sunshinePoll); show(2); });
+    document.getElementById('next3').addEventListener('click', () => { clearInterval(sunshinePoll); show(4); });
+
+    // ---- Step 4: Pi ----
+    document.getElementById('back4').addEventListener('click', () => show(3));
+    document.getElementById('skip4').addEventListener('click', () => show(5));
+    document.getElementById('test-pi').addEventListener('click', async () => {
+      const el = document.getElementById('poll-pi');
+      el.innerHTML = '<span class="cd-spinner-inline"></span> Testing…';
+      el.classList.remove('success', 'error');
+      const r = await fetch('/api/onboarding/test-pi', { method: 'POST', credentials: 'include' });
+      const data = await r.json();
+      if (data.reachable) {
+        el.classList.add('success');
+        el.innerHTML = '✓ Pi reachable';
+        document.getElementById('next4').classList.remove('cd-hidden');
+      } else {
+        el.classList.add('error');
+        el.innerHTML = `Could not reach Pi: ${data.reason || data.status || 'unknown'}`;
+      }
+    });
+    document.getElementById('next4').addEventListener('click', () => show(5));
+
+    // ---- Step 5: BIOS WoL ----
+    document.getElementById('back5').addEventListener('click', () => show(4));
+    document.getElementById('next5').addEventListener('click', () => show(6));
+
+    // ---- Step 6: Finish ----
+    document.getElementById('finish').addEventListener('click', async () => {
+      await fetch('/api/onboarding/complete', { method: 'POST', credentials: 'include' });
+      location.href = '/';
+    });
+
+    show(1);
+  </script>
+</body>
+</html>

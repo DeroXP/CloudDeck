@@ -1,0 +1,58 @@
+# Dependencies
+node_modules/
+client/node_modules/
+agent/node_modules/
+
+# Python
+pi/venv/
+pi/__pycache__/
+pi/*.pyc
+
+# Environment
+.env
+.env.local
+.env.*.local
+client/.env
+agent/.env
+pi/.env
+
+# Persistence
+client/data/*.json
+client/data/*.db
+client/data/*.db-journal
+client/data/screenshots/
+agent/data/
+
+# Logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+logs/
+
+# OS
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Editors
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Build outputs
+dist/
+build/
+
+# Agent installer artifacts
+agent/installer/output/
+agent/installer/*.exe
+
+# Updates downloaded by auto-updater
+agent/.updates/
+
+# Test artifacts
+coverage/
+.nyc_output/
