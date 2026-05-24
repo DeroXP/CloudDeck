@@ -213,6 +213,12 @@ input:focus, select:focus {
 .cd-power.online { color: var(--cd-red); border-color: var(--cd-red); box-shadow: 0 0 18px var(--cd-red-glow); }
 .cd-power.offline { color: var(--cd-fg-dim); animation: cd-pulse 2s infinite; }
 .cd-power.connecting { color: var(--cd-yellow); animation: cd-pulse 1s infinite; }
+.cd-power.cd-power-disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+  animation: none;
+  pointer-events: none;
+}
 .cd-power svg { width: 18px; height: 18px; }
 @keyframes cd-pulse {
   0%, 100% { opacity: 1; } 50% { opacity: 0.45; }

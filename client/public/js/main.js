@@ -86,19 +86,32 @@ xmb.registerCategory('settings', settings.render);
 const powerBtn = document.getElementById('power-btn');
 focus.register('header', powerBtn);
 let pcOnline = false;
+const piConfigured = cfg.piConfigured === true;
 realtime.addEventListener('msg:pc-status', e => setPcStatus(e.detail.online));
 
 function setPcStatus(online) {
   pcOnline = online;
-  powerBtn.classList.remove('online', 'offline', 'connecting');
+  powerBtn.classList.remove('online', 'offline', 'connecting', 'cd-power-disabled');
   powerBtn.classList.add(online ? 'online' : 'offline');
+  // No Pi + PC offline → there's no useful action to take here. Sleep needs
+  // the agent (which needs the PC on) and wake needs the Pi. So we dim the
+  // button and explain in the items pane.
+  if (!online && !piConfigured) {
+    powerBtn.classList.add('cd-power-disabled');
+    powerBtn.title = 'Wake-on-LAN not configured — power the PC on manually';
+  } else {
+    powerBtn.title = online ? 'Sleep PC' : 'Wake PC';
+  }
   if (online) {
     library.load();
     screenshots.load();
     checkResumeGame();
   } else {
+    const msg = piConfigured
+      ? 'PC offline. Press power to wake.'
+      : 'PC offline. Power it on manually — the agent will connect automatically. (Add a Pi to enable remote wake.)';
     document.getElementById('items').innerHTML =
-      '<div style="text-align:center; color: var(--cd-fg-dim); padding: 60px;">PC offline. Press power to wake.</div>';
+      `<div style="text-align:center; color: var(--cd-fg-dim); padding: 60px; max-width: 480px; margin: 0 auto; line-height: 1.6;">${msg}</div>`;
   }
 }
 
@@ -111,6 +124,10 @@ powerBtn.addEventListener('click', async () => {
       toast('Sleeping PC…', 'ok');
     } catch (err) { toast(err.message, 'warn'); }
     return;
+  }
+  if (!piConfigured) {
+    // The disabled class blocks pointer events; this guards keyboard/controller paths.
+    return toast('Wake-on-LAN not configured — power the PC on manually', 'info');
   }
   if (me.role !== 'admin') return toast('Only admins can wake the PC', 'warn');
   powerBtn.classList.replace('offline', 'connecting');

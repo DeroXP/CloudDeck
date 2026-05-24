@@ -103,6 +103,7 @@ app.get('/api/public-config', (_req, res) => {
     enable2fa: config.enable2fa,
     onboardingComplete: store.getConfig().onboardingComplete === true,
     hasAnyAdmin: users.hasAnyAdmin(),
+    piConfigured: pi.configured(),
   });
 });
 
