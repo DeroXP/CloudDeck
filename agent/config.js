@@ -43,6 +43,12 @@ export const config = {
   muteSpeakers: process.env.MUTE_PC_SPEAKERS_ON_SESSION !== 'false',
   enableRemoteDesktop: process.env.ENABLE_REMOTE_DESKTOP !== 'false',
 
+  // Which stream host CloudDeck assumes is running. `sunshine` runs the
+  // full pre-flight (probe Sunshine, switch displays, mute speakers) before
+  // launching. `parsec` (or anything non-sunshine) just launches the game and
+  // leaves the OS alone — Parsec captures the live desktop itself.
+  streamBackend: (process.env.STREAM_BACKEND || 'sunshine').toLowerCase(),
+
   paths: {
     data: path.join(__dirname, 'data'),
     updates: path.join(__dirname, '.updates'),

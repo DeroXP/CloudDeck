@@ -159,6 +159,7 @@ async function launchGame(game) {
       game,
       settings: streamCfg,
       streamUrl: result?.streamUrl || null,
+      backend: result?.backend || 'sunshine',
     });
   } catch (err) {
     toast(`Launch failed: ${err.message}`, 'warn');

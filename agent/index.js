@@ -181,30 +181,30 @@ async function dispatch(type, payload = {}, { from } = {}) {
       const game = games.find(g => g.id === payload.gameId);
       if (!game) throw new Error('Game not found');
 
-      // Pre-flight: if Sunshine isn't reachable we'd be touching displays and
-      // audio for a stream that can never appear. Refuse early so the user
-      // gets a clear toast instead of a stuck stream view.
-      if (!payload.skipSunshineCheck) {
+      const usingSunshine = config.streamBackend === 'sunshine';
+
+      // Sunshine-only: pre-flight + display switch + audio mute. With Parsec
+      // (or any non-Sunshine backend) the stream host captures the live
+      // desktop, so we deliberately don't touch displays or audio.
+      if (usingSunshine && !payload.skipSunshineCheck) {
         const health = await sunshine.health();
         if (!health.ok) {
           throw new Error('Sunshine is not reachable. Install and start Sunshine before launching games.');
         }
       }
-
-      // Optionally apply stream config from the client first
-      if (payload.streamConfig) {
+      if (usingSunshine && payload.streamConfig) {
         const [w, h] = parseResolution(payload.streamConfig.resolution || '1080p');
         await display.activateVirtual({ width: w, height: h, fps: payload.streamConfig.fps || 60 });
       }
-      if (config.muteSpeakers) await audio.muteSpeakers().catch(() => {});
+      if (usingSunshine && config.muteSpeakers) {
+        await audio.muteSpeakers().catch(() => {});
+      }
+
       const launched = await launcher.launch(game);
-      // Hand the browser a stream URL if the user has configured one
-      // (typically a moonlight-web or similar WebRTC bridge running locally).
-      // When empty the frontend shows its "install Moonlight" placeholder.
-      const streamUrl = config.sunshine.browserStreamUrl
+      const streamUrl = usingSunshine && config.sunshine.browserStreamUrl
         ? sunshine.browserStreamUrl(config.sunshine.browserStreamUrl, game.gameId)
         : null;
-      return { ...launched, streamUrl };
+      return { ...launched, streamUrl, backend: config.streamBackend };
     }
 
     case 'close-game':

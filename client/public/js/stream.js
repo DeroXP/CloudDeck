@@ -59,7 +59,7 @@ export class StreamModule extends EventTarget {
     this.dispatchEvent(new Event('exited'));
   }
 
-  async startStream({ game, settings, streamUrl }) {
+  async startStream({ game, settings, streamUrl, backend }) {
     this.currentGame = game;
     this.active = true;
     this.startedAt = Date.now();
@@ -72,7 +72,7 @@ export class StreamModule extends EventTarget {
     if (streamUrl) {
       this.streamFrame.src = streamUrl;
     } else {
-      this.streamFrame.src = this._placeholderUrl(game);
+      this.streamFrame.src = this._placeholderUrl(game, backend);
     }
 
     // Best-effort fullscreen — needs to be on the same task as the user gesture
@@ -83,11 +83,11 @@ export class StreamModule extends EventTarget {
     this._updateFullscreenBtn();
   }
 
-  _placeholderUrl(game) {
-    // Honest, helpful explanation — we hit this when the agent didn't ship a
-    // streamUrl back, which means Sunshine is launching the game on the PC
-    // but there's no browser viewer wired up. Tell the user what to install.
+  _placeholderUrl(game, backend) {
     const name = (game?.name || 'Unknown').replace(/[<>"']/g, '');
+    const body = backend === 'parsec'
+      ? this._parsecPlaceholderBody(name)
+      : this._sunshinePlaceholderBody(name);
     return 'data:text/html;charset=utf-8,' + encodeURIComponent(`<!doctype html>
 <html><head><meta name="viewport" content="width=device-width,initial-scale=1"><style>
 body{background:#0a0e1a;color:#f4f6fb;font-family:system-ui,-apple-system,sans-serif;margin:0;padding:24px;min-height:100vh;display:flex;align-items:center;justify-content:center;box-sizing:border-box;line-height:1.5}
@@ -98,20 +98,33 @@ p{font-size:14px;color:#cdd5e6;margin:8px 0}
 ol{font-size:14px;color:#cdd5e6;padding-left:20px}
 li{margin:6px 0}
 code{background:rgba(255,255,255,0.06);padding:2px 6px;border-radius:4px;font-size:12px}
+.btn{display:inline-block;margin-top:12px;padding:12px 22px;background:#e63946;color:#fff;border-radius:8px;text-decoration:none;font-weight:600;letter-spacing:1px}
+.btn:hover{background:#c92a37}
 .now{margin-top:18px;padding-top:14px;border-top:1px solid rgba(255,255,255,0.07);font-size:12px;color:#aab3c8}
 a{color:#4c95ff}
-</style></head><body><div class="box">
+</style></head><body><div class="box">${body}</div></body></html>`);
+  }
+
+  _parsecPlaceholderBody(name) {
+    return `
+<h1>Launched on PC</h1><h2>Open Parsec to view</h2>
+<p><strong>${name}</strong> is now running on your gaming PC. Tap the button below to open the Parsec app on this device — your PC should appear in the host list (signed into the same Parsec account), tap it to start streaming.</p>
+<p style="text-align:center"><a class="btn" href="parsec:" target="_blank">Open Parsec →</a></p>
+<p style="font-size:12px;color:#aab3c8">First time? Install Parsec from the <a href="https://parsec.app/downloads" target="_blank">App Store / Play Store / parsec.app/downloads</a> and sign in with the same account you used on the PC. The PC will auto-discover.</p>
+<div class="now">Now playing: <strong>${name}</strong></div>`;
+  }
+
+  _sunshinePlaceholderBody(name) {
+    return `
 <h1>Launched on PC</h1><h2>No in-browser viewer configured</h2>
 <p>Sunshine is hosting the stream on your PC, but Sunshine doesn't ship a browser client — the easiest way to view it is the <strong>Moonlight</strong> app.</p>
 <ol>
-  <li>Install <a href="https://moonlight-stream.org/" target="_blank">Moonlight</a> on the device you want to play from (Android, iOS, Windows, macOS, Linux).</li>
-  <li>Open Moonlight on the same network as your PC and tap the PC tile (or add it by IP if it doesn't auto-discover).</li>
+  <li>Install <a href="https://moonlight-stream.org/" target="_blank">Moonlight</a> on the device you want to play from.</li>
+  <li>Open Moonlight on the same network as your PC and tap the PC tile.</li>
   <li>Pair using the PIN that Sunshine prompts for at <code>https://&lt;your-pc&gt;:47990</code>.</li>
   <li>Pick the running game and start streaming.</li>
 </ol>
-<p>To embed the stream <em>here</em> in CloudDeck instead of in Moonlight, set <code>SUNSHINE_BROWSER_STREAM_URL</code> in <code>agent/.env</code> to a browser-WebRTC bridge like <a href="https://github.com/games-on-whales/moonlight-web" target="_blank">moonlight-web</a> running on your PC.</p>
-<div class="now">Now playing: <strong>${name}</strong></div>
-</div></body></html>`);
+<div class="now">Now playing: <strong>${name}</strong></div>`;
   }
 
   toggleFullscreen() {
