@@ -20,6 +20,10 @@ const STEAM_STOREFRONT = id => `/api/steam-meta/${encodeURIComponent(id)}`;
 // when hit directly from the browser, so we route through the server.
 const XBOX_CATALOG = id => `/api/xbox-meta/${encodeURIComponent(id)}`;
 
+// Wikipedia REST summary proxy. CORS-open in theory but we still route
+// through the server so we share the 24h cache across browsers.
+const WIKI_SUMMARY = title => `/api/wiki-meta/${encodeURIComponent(title)}`;
+
 export class GameDetailModule extends EventTarget {
   constructor({ realtime }) {
     super();
@@ -71,19 +75,41 @@ export class GameDetailModule extends EventTarget {
     this._renderFull(game, meta, stats);
   }
 
-  // Dispatch to the right metadata fetcher. Order matters: we prefer the
-  // platform-native source (Steam for Steam, MS Store for Xbox), but for any
-  // other platform we fall back to whatever Steam app id the agent attached
-  // via name-matching during the library scan. That gives non-Steam titles
-  // like Battle.net Call of Duty real art + a real description through
-  // Steam's storefront.
+  // Dispatch to the right metadata fetcher. Priority order:
+  //   1. Platform-native — Steam for Steam, MS Store for Xbox.
+  //   2. Steam name-match — when the agent attached a steamAppId via name
+  //      matching during the library scan.
+  //   3. Wikipedia — when the agent attached a wikipediaTitle (used for
+  //      games like Valorant that aren't on Steam at all).
+  // Each tier degrades gracefully — Steam gives the richest payload
+  // (description + screenshots + genres), Wikipedia gives a description
+  // + one image.
   async _fetchMeta(game) {
     if (game.platform === 'steam') return this._fetchSteamMeta(game);
     if (game.platform === 'xbox')  return this._fetchXboxMeta(game);
     if (game.steamAppId) {
       return this._fetchSteamMeta({ ...game, gameId: game.steamAppId });
     }
+    if (game.wikipediaTitle) {
+      return this._fetchWikiMeta(game);
+    }
     return null;
+  }
+
+  async _fetchWikiMeta(game) {
+    const res = await fetch(WIKI_SUMMARY(game.wikipediaTitle), {
+      signal: AbortSignal.timeout(8000),
+      credentials: 'include',
+    });
+    if (!res.ok) return null;
+    const data = await res.json();
+    return {
+      description: data.extract || '',
+      hero: data.originalimage?.source || data.thumbnail?.source || null,
+      // Wikipedia only gives one image per article — no gallery, no genres.
+      screenshots: [],
+      genres: [],
+    };
   }
 
   close() {

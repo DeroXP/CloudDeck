@@ -258,6 +258,34 @@ app.get('/api/sessions', auth.requireAuth, (req, res) => {
   res.json({ sessions: store.getRecentSessions(req.user.sub, 50) });
 });
 
+// Wikipedia REST summary proxy. Last-resort metadata source for games that
+// aren't on Steam and aren't on Xbox (Valorant, etc.). Wikipedia content is
+// CC-BY-SA so proxying short summaries to the user's browser is exactly
+// the documented use case for the REST API. Cached aggressively.
+const wikiMetaCache = new Map();   // title -> { data, at }
+const WIKI_META_TTL = 24 * 60 * 60 * 1000;
+app.get('/api/wiki-meta/:title', auth.requireAuth, async (req, res) => {
+  const title = req.params.title;
+  if (!title || title.length > 200) return res.status(400).json({ error: 'Invalid title' });
+  const cached = wikiMetaCache.get(title);
+  if (cached && Date.now() - cached.at < WIKI_META_TTL) return res.json(cached.data);
+  try {
+    const r = await fetch(
+      `https://en.wikipedia.org/api/rest_v1/page/summary/${encodeURIComponent(title)}`,
+      {
+        signal: AbortSignal.timeout(8000),
+        headers: { 'User-Agent': 'CloudDeck/0.1 (https://github.com/DeroXP/CloudDeck)' },
+      },
+    );
+    if (!r.ok) return res.status(r.status).json({ error: `Wikipedia ${r.status}` });
+    const data = await r.json();
+    wikiMetaCache.set(title, { data, at: Date.now() });
+    res.json(data);
+  } catch (err) {
+    res.status(502).json({ error: err.message });
+  }
+});
+
 // Microsoft Store displaycatalog proxy — feeds the game-detail modal with
 // description + screenshots for Xbox / Game Pass titles. Same cached forward
 // pattern as the Steam one below.

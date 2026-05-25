@@ -90,17 +90,30 @@ export class Library {
       .filter(g => { if (seen.has(g.id)) return false; seen.add(g.id); return true; })
       .sort((a, b) => a.name.localeCompare(b.name));
 
-    // Steam name-match fallback: for non-Steam/Xbox games that don't carry
-    // their own art, search the Steam storefront and pick up Steam's box art
-    // + cached app id. The detail modal then queries Steam's storefront for
-    // a description. Runs in parallel; misses are silent.
+    // Cross-source metadata enrichment for non-Steam/Xbox games:
+    //   1. Try Steam name-match — gives box art + a steamAppId the detail
+    //      modal can resolve to description / screenshots / genres.
+    //   2. If Steam returns nothing (e.g. Riot's Valorant isn't on Steam),
+    //      fall back to Wikipedia's REST summary — gives a description and
+    //      a logo/thumbnail. The frontend game-detail modal also fetches
+    //      from the wiki when wikipediaTitle is present.
+    // Both runs in parallel per-game with their respective caches so a
+    // refresh is cheap after the first scan.
     await Promise.all(games.map(async g => {
       if (g.platform === 'steam' || g.platform === 'xbox') return;
       if (g.art && g.steamAppId) return;
-      const match = await this._steamSearch(g.name).catch(() => null);
-      if (match) {
-        g.steamAppId = match.id;
-        if (!g.art) g.art = STEAM_BOX_ART(match.id);
+
+      const steamMatch = await this._steamSearch(g.name).catch(() => null);
+      if (steamMatch) {
+        g.steamAppId = steamMatch.id;
+        if (!g.art) g.art = STEAM_BOX_ART(steamMatch.id);
+        return;   // Steam wins — better art + richer detail-modal payload
+      }
+
+      const wiki = await this._wikiSearch(g.name).catch(() => null);
+      if (wiki) {
+        g.wikipediaTitle = wiki.title;
+        if (!g.art && wiki.thumbnail) g.art = wiki.thumbnail;
       }
     }));
 
@@ -111,6 +124,39 @@ export class Library {
     this.cache = { games, scannedAt: Date.now() };
     this.cacheAt = Date.now();
     return this.cache;
+  }
+
+  // Cached Wikipedia REST summary lookup. Used as the second-tier metadata
+  // fallback when Steam name-match misses (Riot's Valorant being the classic
+  // example — not on Steam at all). Disambiguation pages are treated as
+  // misses since they don't carry useful description/image data.
+  async _wikiSearch(name) {
+    if (!name) return null;
+    this._wikiSearchCache ||= new Map();
+    if (this._wikiSearchCache.has(name)) return this._wikiSearchCache.get(name);
+    try {
+      const url = `https://en.wikipedia.org/api/rest_v1/page/summary/${encodeURIComponent(name)}`;
+      const res = await fetch(url, {
+        signal: AbortSignal.timeout(5000),
+        headers: { 'User-Agent': 'CloudDeck/0.1 (https://github.com/DeroXP/CloudDeck)' },
+      });
+      if (!res.ok) { this._wikiSearchCache.set(name, null); return null; }
+      const data = await res.json();
+      if (data.type === 'disambiguation') {
+        this._wikiSearchCache.set(name, null);
+        return null;
+      }
+      const result = {
+        title: data.title,
+        extract: data.extract || '',
+        thumbnail: data.originalimage?.source || data.thumbnail?.source || null,
+      };
+      this._wikiSearchCache.set(name, result);
+      return result;
+    } catch {
+      this._wikiSearchCache.set(name, null);
+      return null;
+    }
   }
 
   // Cached Steam storefront search. Game names don't change so we cache for
