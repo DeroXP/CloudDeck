@@ -108,6 +108,7 @@ const PLATFORM_LABELS = {
   ea: 'EA App',
   ubisoft: 'Ubisoft Connect',
   gog: 'GOG Galaxy',
+  riot: 'Riot Client',
 };
 function platformBadge(platform) {
   return { label: PLATFORM_LABELS[platform] || 'Unknown' };

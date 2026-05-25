@@ -617,6 +617,7 @@ input:focus, select:focus {
 .cd-platform-ea        { background: #ff4747; }
 .cd-platform-ubisoft   { background: #1c75bc; }
 .cd-platform-gog       { background: #7c3aed; }
+.cd-platform-riot      { background: #d13639; }
 .cd-game-meta {
   position: relative;
   z-index: 2;

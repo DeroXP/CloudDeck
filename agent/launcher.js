@@ -30,7 +30,8 @@ export class Launcher {
     const launchUrl = game.launchUrl;
     if (!launchUrl) throw new Error('Game has no launchUrl');
 
-    // Three flavors of launchUrl, picked by prefix:
+    const launchArgs = Array.isArray(game.launchArgs) ? game.launchArgs : [];
+    // Four flavors of launchUrl, picked by prefix:
     //   shell:appsfolder\<AUMID>  → UWP/Xbox apps — only Explorer resolves
     //                                this namespace path correctly.
     //   <scheme>://...            → URL protocol handlers (steam://,
@@ -38,6 +39,10 @@ export class Launcher {
     //                                uplay://, goggalaxy://). Routed via
     //                                cmd's `start` which knows about the
     //                                Windows protocol registry.
+    //   <path>\game.exe + args    → Riot's RiotClientServices.exe needs
+    //                                --launch-product / --launch-patchline
+    //                                args. spawn directly to keep arg
+    //                                quoting clean.
     //   <path>\game.exe           → Raw executable (EA App fallback).
     //                                spawn it directly; the EA Desktop
     //                                client attaches automatically.
@@ -45,6 +50,11 @@ export class Launcher {
       spawn('explorer.exe', [launchUrl], { detached: true, stdio: 'ignore' }).unref();
     } else if (/^[a-z][a-z0-9+.-]*:\/\//i.test(launchUrl) || launchUrl.startsWith('steam:')) {
       spawn('cmd', ['/c', 'start', '""', launchUrl], { detached: true, stdio: 'ignore' }).unref();
+    } else if (launchArgs.length > 0) {
+      // Direct spawn with positional args — bypasses cmd's `start` since
+      // start.exe + args mangles quoting for paths containing spaces.
+      const cwd = launchUrl.substring(0, launchUrl.lastIndexOf('\\'));
+      spawn(launchUrl, launchArgs, { detached: true, stdio: 'ignore', cwd: cwd || undefined }).unref();
     } else {
       // Treat as raw path — start.exe handles it with the launch dir as cwd
       // so games that load assets relative to the exe still find them.

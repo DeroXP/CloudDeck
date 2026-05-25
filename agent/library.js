@@ -32,6 +32,7 @@ import * as battlenet from './launchers/battlenet.js';
 import * as ea from './launchers/ea.js';
 import * as ubisoft from './launchers/ubisoft.js';
 import * as gog from './launchers/gog.js';
+import * as riot from './launchers/riot.js';
 
 const EXTRA_LAUNCHERS = [
   { name: 'epic',      mod: epic },
@@ -39,6 +40,7 @@ const EXTRA_LAUNCHERS = [
   { name: 'ea',        mod: ea },
   { name: 'ubisoft',   mod: ubisoft },
   { name: 'gog',       mod: gog },
+  { name: 'riot',      mod: riot },
 ];
 
 const execAsync = promisify(exec);
