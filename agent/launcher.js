@@ -31,7 +31,8 @@ export class Launcher {
     if (!launchUrl) throw new Error('Game has no launchUrl');
 
     const launchArgs = Array.isArray(game.launchArgs) ? game.launchArgs : [];
-    // Four flavors of launchUrl, picked by prefix:
+
+    // Pick the right spawn shape for the launch URL. Four flavors:
     //   shell:appsfolder\<AUMID>  → UWP/Xbox apps — only Explorer resolves
     //                                this namespace path correctly.
     //   <scheme>://...            → URL protocol handlers (steam://,
@@ -46,21 +47,35 @@ export class Launcher {
     //   <path>\game.exe           → Raw executable (EA App fallback).
     //                                spawn it directly; the EA Desktop
     //                                client attaches automatically.
+    let method, cmd, args, cwd;
     if (launchUrl.startsWith('shell:')) {
-      spawn('explorer.exe', [launchUrl], { detached: true, stdio: 'ignore' }).unref();
+      method = 'shell-uri';
+      cmd = 'explorer.exe';
+      args = [launchUrl];
     } else if (/^[a-z][a-z0-9+.-]*:\/\//i.test(launchUrl) || launchUrl.startsWith('steam:')) {
-      spawn('cmd', ['/c', 'start', '""', launchUrl], { detached: true, stdio: 'ignore' }).unref();
+      method = 'protocol-uri';
+      cmd = 'cmd';
+      args = ['/c', 'start', '""', launchUrl];
     } else if (launchArgs.length > 0) {
-      // Direct spawn with positional args — bypasses cmd's `start` since
-      // start.exe + args mangles quoting for paths containing spaces.
-      const cwd = launchUrl.substring(0, launchUrl.lastIndexOf('\\'));
-      spawn(launchUrl, launchArgs, { detached: true, stdio: 'ignore', cwd: cwd || undefined }).unref();
+      method = 'exe-with-args';
+      cmd = launchUrl;
+      args = launchArgs;
+      cwd = launchUrl.substring(0, launchUrl.lastIndexOf('\\')) || undefined;
     } else {
-      // Treat as raw path — start.exe handles it with the launch dir as cwd
-      // so games that load assets relative to the exe still find them.
-      const cwd = launchUrl.substring(0, launchUrl.lastIndexOf('\\'));
-      spawn('cmd', ['/c', 'start', '""', '/D', cwd || '.', launchUrl], { detached: true, stdio: 'ignore' }).unref();
+      method = 'raw-exe';
+      cwd = launchUrl.substring(0, launchUrl.lastIndexOf('\\')) || undefined;
+      cmd = 'cmd';
+      args = ['/c', 'start', '""', '/D', cwd || '.', launchUrl];
     }
+
+    console.log(`[launcher] launching "${game.name}" via ${method}: ${cmd} ${args.join(' ')}`);
+
+    // Spawn with a brief error-listen window so synchronous failures (bad
+    // exe path, permission denied, etc.) bubble back to the frontend toast
+    // instead of silently returning {ok:true} and leaving the user staring
+    // at the XMB wondering why nothing happened. After the window we detach
+    // and let the poll loop watch for the game process to actually appear.
+    await this._spawnWithErrorWindow(cmd, args, { cwd, windowMs: 800 });
 
     this.current = {
       game,
@@ -68,10 +83,50 @@ export class Launcher {
       pid: null,
       userInitiatedClose: false,
       startedAt: Date.now(),
+      method,
     };
 
     this._startPoll();
-    return { ok: true, started: this.current };
+    return { ok: true, started: this.current, method };
+  }
+
+  // Spawn helper that listens for an immediate 'error' event (synchronous
+  // spawn failure — exec not found, EACCES, etc.) OR an early non-zero exit
+  // inside windowMs, then detaches the child and resolves. We deliberately
+  // do NOT treat a zero exit code from cmd/explorer as a problem — those
+  // dispatcher processes exit fast after handing the URL off, which is
+  // expected behavior.
+  _spawnWithErrorWindow(cmd, args, { cwd, windowMs }) {
+    return new Promise((resolve, reject) => {
+      let child;
+      try {
+        child = spawn(cmd, args, { detached: true, stdio: 'ignore', cwd });
+      } catch (err) {
+        return reject(new Error(`Spawn failed: ${err.message}`));
+      }
+
+      let settled = false;
+      const settle = (fn, val) => { if (!settled) { settled = true; fn(val); } };
+
+      child.once('error', err => settle(reject, new Error(`Spawn error: ${err.message}`)));
+      child.once('exit', (code, signal) => {
+        // Non-zero exit inside the window means the dispatcher itself failed.
+        // null code + signal means killed externally — treat as failure.
+        if (code !== 0 && code !== null) {
+          settle(reject, new Error(`Process exited with code ${code} during launch window`));
+        } else if (code === null && signal) {
+          settle(reject, new Error(`Process killed by signal ${signal} during launch window`));
+        }
+        // code === 0 — dispatcher succeeded, fall through to the timeout.
+      });
+
+      setTimeout(() => {
+        if (!settled) {
+          child.unref();
+          settle(resolve);
+        }
+      }, windowMs);
+    });
   }
 
   async close({ userInitiated = false } = {}) {
