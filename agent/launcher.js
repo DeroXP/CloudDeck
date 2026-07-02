@@ -47,11 +47,17 @@ export class Launcher {
     //   <path>\game.exe           → Raw executable (EA App fallback).
     //                                spawn it directly; the EA Desktop
     //                                client attaches automatically.
-    let method, cmd, args, cwd;
+    let method, cmd, args, cwd, ignoreExitCode = false;
     if (launchUrl.startsWith('shell:')) {
       method = 'shell-uri';
       cmd = 'explorer.exe';
       args = [launchUrl];
+      // explorer.exe exits with code 1 BY DESIGN even on success (long-
+      // standing documented Windows behavior). Its exit code carries no
+      // signal — only the 'error' event (exe missing, EACCES) is meaningful.
+      // Without this flag every Xbox launch reported a false failure while
+      // the game opened fine.
+      ignoreExitCode = true;
     } else if (/^[a-z][a-z0-9+.-]*:\/\//i.test(launchUrl) || launchUrl.startsWith('steam:')) {
       method = 'protocol-uri';
       cmd = 'cmd';
@@ -75,7 +81,7 @@ export class Launcher {
     // instead of silently returning {ok:true} and leaving the user staring
     // at the XMB wondering why nothing happened. After the window we detach
     // and let the poll loop watch for the game process to actually appear.
-    await this._spawnWithErrorWindow(cmd, args, { cwd, windowMs: 800 });
+    await this._spawnWithErrorWindow(cmd, args, { cwd, windowMs: 800, ignoreExitCode });
 
     this.current = {
       game,
@@ -96,7 +102,7 @@ export class Launcher {
   // do NOT treat a zero exit code from cmd/explorer as a problem — those
   // dispatcher processes exit fast after handing the URL off, which is
   // expected behavior.
-  _spawnWithErrorWindow(cmd, args, { cwd, windowMs }) {
+  _spawnWithErrorWindow(cmd, args, { cwd, windowMs, ignoreExitCode = false }) {
     return new Promise((resolve, reject) => {
       let child;
       try {
@@ -110,14 +116,17 @@ export class Launcher {
 
       child.once('error', err => settle(reject, new Error(`Spawn error: ${err.message}`)));
       child.once('exit', (code, signal) => {
-        // Non-zero exit inside the window means the dispatcher itself failed.
-        // null code + signal means killed externally — treat as failure.
-        if (code !== 0 && code !== null) {
+        // Non-zero exit inside the window means the dispatcher itself failed
+        // — unless this dispatcher's exit code is known to be meaningless
+        // (explorer.exe always exits 1). null code + signal means killed
+        // externally — treat as failure regardless.
+        if (code !== 0 && code !== null && !ignoreExitCode) {
           settle(reject, new Error(`Process exited with code ${code} during launch window`));
         } else if (code === null && signal) {
           settle(reject, new Error(`Process killed by signal ${signal} during launch window`));
         }
-        // code === 0 — dispatcher succeeded, fall through to the timeout.
+        // Otherwise the dispatcher handed off successfully — fall through
+        // to the timeout, which resolves.
       });
 
       setTimeout(() => {
