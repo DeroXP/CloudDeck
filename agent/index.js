@@ -26,10 +26,10 @@ import { Resume } from './resume.js';
 import { Updater } from './updater.js';
 import { Notifications } from './notifications.js';
 
-// Allow self-signed certs from local Sunshine
-if (config.sunshine.url.startsWith('https://localhost')) {
-  process.env.NODE_TLS_REJECT_UNAUTHORIZED = '0';
-}
+// Self-signed Sunshine cert tolerance is scoped inside SunshineClient via a
+// per-request undici dispatcher (see sunshine.js) — we deliberately do NOT
+// set NODE_TLS_REJECT_UNAUTHORIZED here, which would disable cert checks for
+// every outbound HTTPS call in the process.
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const pkg = JSON.parse(readFileSync(path.join(__dirname, 'package.json'), 'utf8'));
@@ -200,7 +200,17 @@ async function dispatch(type, payload = {}, { from } = {}) {
         await audio.muteSpeakers().catch(() => {});
       }
 
-      const launched = await launcher.launch(game);
+      let launched;
+      try {
+        launched = await launcher.launch(game);
+      } catch (err) {
+        // If the launch throws after we switched the display / muted audio,
+        // undo those so the PC isn't left on second-screen-only or muted.
+        // No-op in moonlight mode (guards are false).
+        if (usingSunshine && payload.streamConfig) await display.deactivateVirtual().catch(() => {});
+        if (usingSunshine && config.muteSpeakers) await audio.restoreSpeakers().catch(() => {});
+        throw err;
+      }
       const streamUrl = usingSunshine && config.sunshine.browserStreamUrl
         ? sunshine.browserStreamUrl(config.sunshine.browserStreamUrl, game.gameId)
         : null;

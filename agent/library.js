@@ -187,7 +187,12 @@ export class Library {
         const got = norm(it);
         return got.startsWith(wantedNorm) || wantedNorm.startsWith(got);
       });
-      const hit = exact || prefixed || items[0];
+      // No blind items[0] fallback: Steam's storesearch is fuzzy and returns
+      // popular-but-unrelated hits, so a non-Steam game with no real match
+      // would otherwise inherit some famous game's appId + box art. Require
+      // an exact or prefix match; otherwise return null and let the caller
+      // fall through to the Wikipedia tier.
+      const hit = exact || prefixed || null;
       const result = hit ? { id: String(hit.id), name: hit.name } : null;
       this._steamSearchCache.set(name, result);
       return result;

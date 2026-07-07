@@ -81,17 +81,23 @@ class InputRouter extends EventTarget {
 
   // -- Touch --
   _bindTouch() {
-    let startX = 0, startY = 0, startT = 0;
+    let startX = 0, startY = 0, startT = 0, startEl = null;
     window.addEventListener('touchstart', e => {
       this._setMode('touch');
       if (e.touches.length === 1) {
         startX = e.touches[0].clientX;
         startY = e.touches[0].clientY;
         startT = Date.now();
+        startEl = e.target;
       }
     }, { passive: true });
     window.addEventListener('touchend', e => {
       if (e.changedTouches.length !== 1) return;
+      // Mobile navigates categories via the bottom tab bar, and the game grid
+      // / panels are natively scrollable. A scroll flick used to be misread
+      // as a category-switch / focus-move nav gesture. Suppress swipe-to-nav
+      // when the gesture started inside a scroll container.
+      if (startEl?.closest?.('.cd-games, .cd-items, .cd-shots, .cd-settings, .cd-dash, .cd-detail-scroll')) return;
       const dx = e.changedTouches[0].clientX - startX;
       const dy = e.changedTouches[0].clientY - startY;
       const dt = Date.now() - startT;

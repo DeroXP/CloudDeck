@@ -171,33 +171,47 @@ export class Launcher {
 
   _startPoll() {
     clearInterval(this.pollHandle);
+    // Pin the session this poll belongs to. If launch(B) swaps this.current
+    // to a new session while a straggler callback for A is mid-await, the
+    // pin lets us bail instead of ending/attributing B against A's poll.
+    const session = this.current;
     let consecutiveAbsent = 0;
     let detectedPid = null;
+    // Detection stability gate: instead of latching the biggest new process
+    // on the very first tick (which can grab an unrelated app — a browser —
+    // the user opened right after launch, especially since store clients take
+    // a few seconds to spawn the game), require the same candidate to be the
+    // top match for a few consecutive ticks and exceed a memory floor.
+    let candidatePid = null;
+    let candidateStreak = 0;
+    const REQUIRE_STREAK = 3;                       // ~3s stable before latching
+    const MIN_WORKING_SET = 120 * 1024 * 1024;      // ignore lightweight helpers
 
     this.pollHandle = setInterval(async () => {
-      if (!this.current) {
-        clearInterval(this.pollHandle);
-        return;
-      }
+      // Bail if a newer session replaced ours, or the session ended.
+      if (this.current !== session) { clearInterval(this.pollHandle); return; }
       // Return null (not []) on failure so we can tell "poll failed" apart
-      // from "poll succeeded and the process list is genuinely empty". A
-      // transient PowerShell hiccup returning [] used to look like the game
-      // vanished, falsely ending the session after two ticks.
+      // from "poll succeeded and the process list is genuinely empty" — a
+      // transient PowerShell hiccup shouldn't look like the game vanished.
       const procs = await listProcesses().catch(() => null);
-      // this.current may have been cleared while we were awaiting (game
-      // ended, user hit "× Exit Stream"). Re-check before touching it.
-      if (!this.current) {
-        clearInterval(this.pollHandle);
-        return;
-      }
+      if (this.current !== session) { clearInterval(this.pollHandle); return; }
       if (procs === null) return;   // skip this tick; don't misread as absence
-      const candidate = this._matchGameProcess(procs, this.current);
 
-      if (candidate && !detectedPid) {
-        detectedPid = candidate.pid;
-        this.current.pid = candidate.pid;
-        this.current.processName = candidate.name;
-        this.onLaunched(this.current);
+      if (!detectedPid) {
+        const candidate = this._matchGameProcess(procs, session);
+        if (candidate && candidate.workingSet >= MIN_WORKING_SET) {
+          if (candidate.pid === candidatePid) candidateStreak++;
+          else { candidatePid = candidate.pid; candidateStreak = 1; }
+          if (candidateStreak >= REQUIRE_STREAK) {
+            detectedPid = candidate.pid;
+            session.pid = candidate.pid;
+            session.processName = candidate.name;
+            this.onLaunched(session);
+          }
+        } else {
+          candidatePid = null;
+          candidateStreak = 0;
+        }
       }
 
       if (detectedPid) {
@@ -205,16 +219,18 @@ export class Launcher {
         if (!still) {
           consecutiveAbsent++;
           if (consecutiveAbsent >= 2) {
-            const exitCode = await this._getExitCode(detectedPid).catch(() => null);
             const finished = {
-              ...this.current,
+              ...session,
               endedAt: Date.now(),
-              durationSeconds: Math.round((Date.now() - this.current.startedAt) / 1000),
-              exitCode: this.current.userInitiatedClose ? 0 : (exitCode ?? 0),
-              clean: this.current.userInitiatedClose || isCleanExit(exitCode),
+              durationSeconds: Math.round((Date.now() - session.startedAt) / 1000),
+              // A game's true exit code isn't reliably readable after the
+              // process is reaped on Windows, so we don't claim to detect
+              // crashes — every detected close is reported as clean.
+              exitCode: 0,
+              clean: true,
             };
             clearInterval(this.pollHandle);
-            this.current = null;
+            if (this.current === session) this.current = null;
             this.onEnded(finished);
           }
         } else {
@@ -227,10 +243,17 @@ export class Launcher {
 
   _matchGameProcess(procs, current) {
     if (!current) return null;   // defense-in-depth — caller already checks
-    const startedAfter = current.startedAt - 5000;
+    // Only processes started after the launch instant are candidates (a small
+    // grace for clock skew). The old -5000 look-back let apps the user opened
+    // just before launching qualify.
+    const startedAfter = current.startedAt - 1000;
     const ignored = new Set([
       'cmd.exe', 'conhost.exe', 'powershell.exe', 'steam.exe', 'steamwebhelper.exe',
       'XboxApp.exe', 'GameBar.exe', 'explorer.exe', 'svchost.exe', 'node.exe',
+      // Common browsers / chat apps so an unrelated window opened right after
+      // launch can never be mistaken for — or force-killed as — the game.
+      'chrome.exe', 'msedge.exe', 'firefox.exe', 'brave.exe', 'opera.exe',
+      'Discord.exe', 'Spotify.exe', 'wscript.exe',
     ]);
     let best = null;
     for (const p of procs) {
@@ -239,13 +262,6 @@ export class Launcher {
       if (!best || p.workingSet > best.workingSet) best = p;
     }
     return best;
-  }
-
-  async _getExitCode(_pid) {
-    // Windows clears exit code data when the process record is reaped, which
-    // typically happens immediately after the last handle closes. We attempt
-    // a best-effort read; failures are treated as "unknown" upstream.
-    return null;
   }
 }
 
@@ -271,9 +287,4 @@ function parseWmiDate(s) {
   if (epoch) return parseInt(epoch[1], 10);
   const d = Date.parse(s);
   return Number.isFinite(d) ? d : null;
-}
-
-function isCleanExit(code) {
-  if (code == null) return true;   // unknown — treat as clean
-  return code === 0;
 }

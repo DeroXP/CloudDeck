@@ -39,8 +39,10 @@ export async function scan() {
     if (/Redistributable|DirectX|\.NET/.test(e.DisplayName)) continue;
 
     // Prefer the registered DisplayIcon (usually points at the game exe).
-    // Fall back to scanning InstallLocation for any exe.
-    let exe = e.DisplayIcon?.split(',')[0]?.trim();
+    // DisplayIcon is often stored quoted with an icon-index suffix, e.g.
+    // "C:\path\game.exe",0 — strip the surrounding quotes before the .exe
+    // check so a quoted value isn't wrongly discarded.
+    let exe = e.DisplayIcon?.split(',')[0]?.trim().replace(/^"|"$/g, '');
     if (exe && !exe.toLowerCase().endsWith('.exe')) exe = null;
     if (!exe && e.InstallLocation) {
       try {

@@ -5,36 +5,66 @@
 //   - drive virtual display creation/teardown
 //   - apply stream resolution/FPS/bitrate before a session starts
 //
-// The default Sunshine cert is self-signed so we deliberately disable TLS
-// verification for localhost. This is fine because the agent runs on the same
-// host as Sunshine.
+// The default Sunshine cert is self-signed. We tolerate that ONLY for this
+// one client, using a node:https Agent with rejectUnauthorized:false scoped
+// to these requests — NOT the process-global NODE_TLS_REJECT_UNAUTHORIZED,
+// which would silently disable certificate verification for every other
+// outbound HTTPS call the agent makes (Steam, Wikipedia, MS Store, GitHub
+// updater) and open them to MITM. Using node:https keeps this dependency-free.
 
 import https from 'node:https';
+import http from 'node:http';
+
+const LOOPBACK = /^https:\/\/(localhost|127\.0\.0\.1|\[::1\])(:|\/|$)/i;
 
 export class SunshineClient {
   constructor({ url, username, password }) {
     this.url = url.replace(/\/+$/, '');
     this.auth = username ? `Basic ${Buffer.from(`${username}:${password || ''}`).toString('base64')}` : null;
-    this.agent = new https.Agent({ rejectUnauthorized: false });
+    // Skip cert verification only when Sunshine is on this machine (loopback).
+    // A non-loopback HTTPS Sunshine URL keeps full TLS verification.
+    this.httpsAgent = new https.Agent({ rejectUnauthorized: !LOOPBACK.test(this.url) });
   }
 
-  async _request(path, init = {}) {
+  _request(path, init = {}) {
+    const target = new URL(this.url + path);
+    const isHttps = target.protocol === 'https:';
+    const lib = isHttps ? https : http;
     const headers = { 'Content-Type': 'application/json', ...(init.headers || {}) };
     if (this.auth) headers.Authorization = this.auth;
-    const res = await fetch(this.url + path, {
-      ...init,
-      headers,
-      // Node 20+ supports `dispatcher` for undici; for simple cases we just
-      // disable TLS verification globally via an env hint if needed.
-      // We can't pass `https.Agent` to global fetch directly, so for HTTPS
-      // self-signed cases we set NODE_TLS_REJECT_UNAUTHORIZED at startup if
-      // SUNSHINE_URL is HTTPS to localhost. See index.js startup.
+
+    return new Promise((resolve, reject) => {
+      const req = lib.request(
+        target,
+        {
+          method: init.method || 'GET',
+          headers,
+          agent: isHttps ? this.httpsAgent : undefined,
+          timeout: 5000,
+        },
+        res => {
+          let body = '';
+          res.setEncoding('utf8');
+          res.on('data', chunk => { body += chunk; });
+          res.on('end', () => {
+            if (!res.statusCode || res.statusCode < 200 || res.statusCode >= 300) {
+              return reject(new Error(`Sunshine ${path} → ${res.statusCode}`));
+            }
+            const ct = res.headers['content-type'] || '';
+            if (ct.includes('application/json')) {
+              try { resolve(JSON.parse(body)); }
+              catch { resolve(body); }
+            } else {
+              resolve(body);
+            }
+          });
+        },
+      );
+      req.on('error', reject);
+      req.on('timeout', () => req.destroy(new Error(`Sunshine ${path} timed out`)));
+      if (init.body) req.write(init.body);
+      req.end();
     });
-    if (!res.ok) {
-      throw new Error(`Sunshine ${path} → ${res.status}`);
-    }
-    const ct = res.headers.get('content-type') || '';
-    return ct.includes('application/json') ? res.json() : res.text();
   }
 
   async health() {

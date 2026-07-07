@@ -22,12 +22,18 @@ export class ScreenshotWatcher {
       console.warn('[screenshots] no screenshot directories found; watcher disabled');
       return;
     }
+    // ignoreInitial:false so the initial scan populates our index, but we
+    // only *announce* (push to the browser) files added AFTER the watcher's
+    // 'ready' event. Otherwise every agent restart re-broadcast every
+    // pre-existing screenshot to any connected browser.
+    this._ready = false;
     this.watcher = chokidar.watch(dirs, {
       ignoreInitial: false,
       depth: 6,
       awaitWriteFinish: { stabilityThreshold: 500 },
     });
     this.watcher.on('add', file => this._add(file));
+    this.watcher.on('ready', () => { this._ready = true; });
     console.log(`[screenshots] watching ${dirs.length} director${dirs.length === 1 ? 'y' : 'ies'}`);
   }
 
@@ -57,15 +63,22 @@ export class ScreenshotWatcher {
     return [...dirs];
   }
 
-  _add(file) {
+  async _add(file) {
     if (!/\.(jpe?g|png|webp|bmp)$/i.test(file)) return;
     const id = Buffer.from(file).toString('base64url');
     if (this.index.has(id)) return;
     this.index.set(id, file);
+    // Files present during the initial scan are indexed silently — only
+    // genuinely new captures (after 'ready') get announced to the browser.
+    if (!this._ready) return;
+    // Use the file's real mtime, not "now", so a screenshot's timestamp is
+    // consistent with what list() reports and sorts correctly.
+    let takenAt = Date.now();
+    try { takenAt = (await fs.stat(file)).mtimeMs; } catch { /* keep now */ }
     this.onNew({
       id,
       name: path.basename(file),
-      takenAt: Date.now(),
+      takenAt,
       thumbnailUrl: `/api/screenshots/${id}`,
     });
   }
