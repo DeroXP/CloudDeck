@@ -9,6 +9,7 @@ import 'dotenv/config';
 import express from 'express';
 import cors from 'cors';
 import cookieParser from 'cookie-parser';
+import rateLimit from 'express-rate-limit';
 import http from 'node:http';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -55,6 +56,18 @@ function requireEnv(name) {
     process.exit(1);
   }
   return v;
+}
+
+// Consistent cookie options for the auth cookies. `secure` follows the
+// request's TLS state (Railway terminates TLS and sets x-forwarded-proto),
+// so cookies are Secure in production and still work over plain HTTP locally.
+function cookieOpts(req, maxAge) {
+  return {
+    httpOnly: true,
+    sameSite: 'lax',
+    secure: req.secure || req.headers['x-forwarded-proto'] === 'https',
+    maxAge,
+  };
 }
 
 // ---- Wire up core services ----
@@ -132,33 +145,31 @@ app.post('/api/auth/login', loginLimiter, async (req, res) => {
   users.recordLogin(user.id);
   const accessToken = auth.issueAccessToken(user);
   const refreshToken = auth.issueRefreshToken(user);
-  res.cookie('cd_token', accessToken, {
-    httpOnly: true,
-    sameSite: 'lax',
-    secure: req.secure || req.headers['x-forwarded-proto'] === 'https',
-    maxAge: 24 * 60 * 60 * 1000,
-  });
-  res.cookie('cd_refresh', refreshToken, {
-    httpOnly: true,
-    sameSite: 'lax',
-    secure: req.secure || req.headers['x-forwarded-proto'] === 'https',
-    maxAge: 30 * 24 * 60 * 60 * 1000,
-  });
+  res.cookie('cd_token', accessToken, cookieOpts(req, 24 * 60 * 60 * 1000));
+  res.cookie('cd_refresh', refreshToken, cookieOpts(req, 30 * 24 * 60 * 60 * 1000));
+  // NOTE: the refresh token is deliberately NOT returned in the body — it
+  // lives only in the httpOnly cookie so client-side script can't read it.
   res.json({
     accessToken,
-    refreshToken,
     user: { id: user.id, username: user.username, role: user.role },
   });
 });
 
 // ---- Auth: refresh ----
+// Rotating refresh: each use revokes the presented token and issues a fresh
+// one. This bounds a stolen token's usefulness to a single request instead
+// of the full 30-day lifetime, and gives us reuse-detection for free (a
+// revoked token presented again simply 401s).
 app.post('/api/auth/refresh', (req, res) => {
-  const token = req.body?.refreshToken || req.cookies?.cd_refresh;
+  const token = req.cookies?.cd_refresh || req.body?.refreshToken;
   if (!token) return res.status(401).json({ error: 'No refresh token' });
   const user = auth.consumeRefreshToken(token);
   if (!user) return res.status(401).json({ error: 'Invalid refresh token' });
+  auth.revokeRefreshToken(token);
+  const newRefresh = auth.issueRefreshToken(user);
   const accessToken = auth.issueAccessToken(user);
-  res.cookie('cd_token', accessToken, { httpOnly: true, sameSite: 'lax' });
+  res.cookie('cd_token', accessToken, cookieOpts(req, 24 * 60 * 60 * 1000));
+  res.cookie('cd_refresh', newRefresh, cookieOpts(req, 30 * 24 * 60 * 60 * 1000));
   res.json({ accessToken });
 });
 
@@ -205,8 +216,8 @@ app.post('/api/onboarding/create-admin', async (req, res) => {
     const user = await users.create({ username, password, role: 'admin' });
     const accessToken = auth.issueAccessToken(store.getUserById(user.id));
     const refreshToken = auth.issueRefreshToken(store.getUserById(user.id));
-    res.cookie('cd_token', accessToken, { httpOnly: true, sameSite: 'lax' });
-    res.cookie('cd_refresh', refreshToken, { httpOnly: true, sameSite: 'lax' });
+    res.cookie('cd_token', accessToken, cookieOpts(req, 24 * 60 * 60 * 1000));
+    res.cookie('cd_refresh', refreshToken, cookieOpts(req, 30 * 24 * 60 * 60 * 1000));
     res.json({ user, accessToken });
   } catch (err) {
     res.status(400).json({ error: err.message });
@@ -258,13 +269,35 @@ app.get('/api/sessions', auth.requireAuth, (req, res) => {
   res.json({ sessions: store.getRecentSessions(req.user.sub, 50) });
 });
 
+// Bounded cache insert: Maps preserve insertion order, so evicting
+// keys().next() removes the oldest entry. Without this the metadata caches
+// grow unbounded on attacker-controlled keys (any authenticated user could
+// script distinct appids/titles until the container OOMs).
+const META_CACHE_MAX = 500;
+function cachePut(map, key, value) {
+  if (map.size >= META_CACHE_MAX && !map.has(key)) {
+    map.delete(map.keys().next().value);
+  }
+  map.set(key, value);
+}
+
+// Light rate limiter shared by the metadata proxy routes so one authenticated
+// client can't hammer distinct keys. Keyed by user id when present, else IP.
+const metaLimiter = rateLimit({
+  windowMs: 60 * 1000,
+  max: 120,                       // 120 metadata lookups / minute is plenty
+  standardHeaders: true,
+  legacyHeaders: false,
+  keyGenerator: req => req.user?.sub || req.ip,
+});
+
 // Wikipedia REST summary proxy. Last-resort metadata source for games that
 // aren't on Steam and aren't on Xbox (Valorant, etc.). Wikipedia content is
 // CC-BY-SA so proxying short summaries to the user's browser is exactly
 // the documented use case for the REST API. Cached aggressively.
 const wikiMetaCache = new Map();   // title -> { data, at }
 const WIKI_META_TTL = 24 * 60 * 60 * 1000;
-app.get('/api/wiki-meta/:title', auth.requireAuth, async (req, res) => {
+app.get('/api/wiki-meta/:title', auth.requireAuth, metaLimiter, async (req, res) => {
   const title = req.params.title;
   if (!title || title.length > 200) return res.status(400).json({ error: 'Invalid title' });
   const cached = wikiMetaCache.get(title);
@@ -279,7 +312,7 @@ app.get('/api/wiki-meta/:title', auth.requireAuth, async (req, res) => {
     );
     if (!r.ok) return res.status(r.status).json({ error: `Wikipedia ${r.status}` });
     const data = await r.json();
-    wikiMetaCache.set(title, { data, at: Date.now() });
+    cachePut(wikiMetaCache, title, { data, at: Date.now() });
     res.json(data);
   } catch (err) {
     res.status(502).json({ error: err.message });
@@ -291,7 +324,7 @@ app.get('/api/wiki-meta/:title', auth.requireAuth, async (req, res) => {
 // pattern as the Steam one below.
 const xboxMetaCache = new Map();   // productId -> { data, at }
 const XBOX_META_TTL = 6 * 60 * 60 * 1000;
-app.get('/api/xbox-meta/:productId', auth.requireAuth, async (req, res) => {
+app.get('/api/xbox-meta/:productId', auth.requireAuth, metaLimiter, async (req, res) => {
   const productId = req.params.productId.replace(/[^A-Za-z0-9-]/g, '');
   if (!productId) return res.status(400).json({ error: 'Invalid productId' });
   const cached = xboxMetaCache.get(productId);
@@ -303,7 +336,7 @@ app.get('/api/xbox-meta/:productId', auth.requireAuth, async (req, res) => {
     );
     if (!r.ok) return res.status(r.status).json({ error: `MS Store ${r.status}` });
     const data = await r.json();
-    xboxMetaCache.set(productId, { data, at: Date.now() });
+    cachePut(xboxMetaCache, productId, { data, at: Date.now() });
     res.json(data);
   } catch (err) {
     res.status(502).json({ error: err.message });
@@ -315,7 +348,7 @@ app.get('/api/xbox-meta/:productId', auth.requireAuth, async (req, res) => {
 // gives us. Cheap to cache — game metadata barely changes.
 const steamMetaCache = new Map(); // appid -> { data, at }
 const STEAM_META_TTL = 6 * 60 * 60 * 1000;   // 6h
-app.get('/api/steam-meta/:appid', auth.requireAuth, async (req, res) => {
+app.get('/api/steam-meta/:appid', auth.requireAuth, metaLimiter, async (req, res) => {
   const appid = req.params.appid.replace(/[^0-9]/g, '');
   if (!appid) return res.status(400).json({ error: 'Invalid appid' });
   const cached = steamMetaCache.get(appid);
@@ -329,7 +362,7 @@ app.get('/api/steam-meta/:appid', auth.requireAuth, async (req, res) => {
     );
     if (!r.ok) return res.status(r.status).json({ error: `Steam ${r.status}` });
     const data = await r.json();
-    steamMetaCache.set(appid, { data, at: Date.now() });
+    cachePut(steamMetaCache, appid, { data, at: Date.now() });
     res.json(data);
   } catch (err) {
     res.status(502).json({ error: err.message });

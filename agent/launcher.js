@@ -179,13 +179,18 @@ export class Launcher {
         clearInterval(this.pollHandle);
         return;
       }
-      const procs = await listProcesses().catch(() => []);
+      // Return null (not []) on failure so we can tell "poll failed" apart
+      // from "poll succeeded and the process list is genuinely empty". A
+      // transient PowerShell hiccup returning [] used to look like the game
+      // vanished, falsely ending the session after two ticks.
+      const procs = await listProcesses().catch(() => null);
       // this.current may have been cleared while we were awaiting (game
       // ended, user hit "× Exit Stream"). Re-check before touching it.
       if (!this.current) {
         clearInterval(this.pollHandle);
         return;
       }
+      if (procs === null) return;   // skip this tick; don't misread as absence
       const candidate = this._matchGameProcess(procs, this.current);
 
       if (candidate && !detectedPid) {

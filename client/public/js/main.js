@@ -153,13 +153,24 @@ powerBtn.addEventListener('click', async () => {
   }
 });
 
-// ---- Game launch ----
+// ---- Game launch + session tracking ----
 // New workflow: CloudDeck just kicks the game off on the PC. The user views
 // the stream in a separate viewer app (Moonlight). We deliberately do NOT
 // enter the in-browser stream view anymore — the iframe was a stuck-state
 // magnet on mobile and we can't actually pipe a Sunshine stream into it
 // without a heavy WebRTC bridge (see project history).
+//
+// Session recording used to live in the stream module (gated on its
+// currentGame, which is never set anymore) — so when the stream view was
+// removed, "Time Played" and the Last Played row silently stopped updating.
+// We now track the launched game here and record the session on game-end.
+let activeSession = null;   // { game, startedAt }
+
 async function launchGame(game) {
+  // If something was already running that we never got an end event for,
+  // flush it so its playtime isn't lost or attributed to the new game.
+  await flushSession();
+
   toast(`Launching ${game.name}…`, 'ok');
   const dev = await api.deviceSettings(deviceId);
   const streamCfg = dev.settings || dev.defaults || {};
@@ -168,24 +179,49 @@ async function launchGame(game) {
       gameId: game.id,
       streamConfig: streamCfg,
     });
-    dashboard.setActiveGame(game.name, Date.now());
+    activeSession = { game, startedAt: Date.now() };
+    dashboard.setActiveGame(game.name, activeSession.startedAt);
     toast(`${game.name} launched — open Moonlight to view`, 'ok', 6000);
   } catch (err) {
     toast(`Launch failed: ${err.message}`, 'warn');
   }
 }
 
-stream.addEventListener('ended', e => {
-  afk.disable();
-  mobile.disable();
+// Record the currently-tracked session (if any) and refresh the recents row.
+// Idempotent — safe to call when nothing is active.
+async function flushSession({ durationSeconds } = {}) {
+  if (!activeSession) return;
+  const { game, startedAt } = activeSession;
+  activeSession = null;   // clear first so re-entrancy can't double-record
+  const duration = durationSeconds ?? Math.round((Date.now() - startedAt) / 1000);
+  // Ignore blips under 5s — usually a misfired launch, not a real session.
+  if (duration < 5) { dashboard.setActiveGame(null); return; }
+  try {
+    await api.recordSession({
+      gameId: game.id,
+      gameName: game.name,
+      platform: game.platform,
+      durationSeconds: duration,
+      deviceId,
+      art: game.art,
+      avgPing: realtime.pingMs,
+    });
+    await library.load();   // refresh Last Played shortcuts from the server
+  } catch { /* best-effort */ }
   dashboard.setActiveGame(null);
-  if (!e.detail.clean) {
-    toast(`Game crashed (exit ${e.detail.exitCode})`, 'crash', 8000);
+}
+
+// Agent reports the game process ended → record the session.
+realtime.addEventListener('msg:game-ended', e => {
+  const detail = e.detail || {};
+  flushSession({ durationSeconds: detail.durationSeconds });
+  if (detail.clean === false) {
+    toast(`${detail.name || 'Game'} closed unexpectedly (exit ${detail.exitCode})`, 'crash', 8000);
   }
 });
-
-stream.addEventListener('crash', e => {
-  toast(`Crash: ${e.detail.name}`, 'crash', 8000);
+// If the PC drops offline mid-session, we won't get an end event — flush now.
+realtime.addEventListener('msg:pc-status', e => {
+  if (!e.detail?.online) flushSession();
 });
 
 afk.addEventListener('fire', async () => {

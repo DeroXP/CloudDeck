@@ -209,7 +209,12 @@ export class WSBridge {
           else pending.resolve(msg.payload);
         } else {
           const client = this.clients.get(pending.clientId);
-          if (client) this._send(client.ws, msg);
+          if (client) {
+            // The agent replied with replyTo = our server-side forwardId;
+            // rewrite it to the id the client originally sent so its own
+            // pending-reply map matches.
+            this._send(client.ws, { ...msg, replyTo: pending.originalId, id: pending.originalId });
+          }
         }
       }
       return;
@@ -268,9 +273,26 @@ export class WSBridge {
         });
       }
       const agent = this.primaryAgent();
-      const forwardId = msg.id || randomUUID();
+      // Always mint a SERVER-side forward id. Using the client-supplied
+      // msg.id as the pendingReplies key would let one client collide with
+      // another client's — or the server's own internal — pending entry and
+      // misroute the reply. We map the server id back to the client's
+      // original id when the reply returns.
+      const originalId = msg.id;
+      const forwardId = randomUUID();
       if (msg.expectsReply) {
-        this.pendingReplies.set(forwardId, { clientId: client.id });
+        const timer = setTimeout(() => {
+          if (this.pendingReplies.delete(forwardId)) {
+            this._send(client.ws, {
+              type: 'error',
+              id: originalId,
+              replyTo: originalId,
+              payload: { error: `Command ${msg.type} timed out` },
+            });
+          }
+        }, 30000);
+        timer.unref?.();
+        this.pendingReplies.set(forwardId, { clientId: client.id, originalId, timer });
       }
       this._send(agent.ws, {
         type: msg.type,
